@@ -21,7 +21,7 @@ endif()
 set(FETCHCONTENT_UPDATES_DISCONNECTED TRUE)
 FetchContent_Declare(fmt
   GIT_REPOSITORY https://github.com/fmtlib/fmt
-  GIT_TAG d141cdbeb0fb422a3fb7173b285fd38e0d1772dc
+  GIT_TAG 1266c2b6003e6391046bbab57dcf20293e25dedd
 )
 
 FetchContent_GetProperties(fmt)
@@ -32,15 +32,37 @@ endif()
 
 # ------------------------------------------------------------------------------
 
+set(FETCHCONTENT_UPDATES_DISCONNECTED TRUE)
+FetchContent_Declare(ag
+  GIT_REPOSITORY https://github.com/typon/libag
+  GIT_TAG 3d00785278e039ae0df2b06f10facea2bf6cf9c4
+)
+
+FetchContent_GetProperties(ag)
+if(NOT ag_POPULATED)
+  FetchContent_Populate(ag)
+  add_subdirectory(${ag_SOURCE_DIR} ${ag_BINARY_DIR} EXCLUDE_FROM_ALL)
+endif()
+
+# ------------------------------------------------------------------------------
+
+
+
+
 project(ftxui-starter
   LANGUAGES CXX
   VERSION 1.0.0
 )
 
-add_executable(ftxui-starter src/main.cpp)
+add_executable(ftxui-starter
+    src/main.cpp
+    src/components.cpp
+    src/utils.cpp
+)
 target_include_directories(ftxui-starter PRIVATE src)
 
 target_link_libraries(ftxui-starter
+  PRIVATE ag
   PRIVATE fmt::fmt
   PRIVATE ftxui::screen
   PRIVATE ftxui::dom
