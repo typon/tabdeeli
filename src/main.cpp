@@ -1,96 +1,36 @@
-#include <functional>  // for function
-#include <memory>      // for allocator, __shared_ptr_access
-#include <string>      // for string, basic_string, operator+, to_string
-#include <vector>      // for vector
+#include <functional>         // for function
+#include <memory>             // for allocator, __shared_ptr_access
+#include <string>             // for string, basic_string, operator+, to_string
+#include <vector>             // for vector
+#include <unordered_map>      // for unordered_map
 
-#include <fmt/core.h>
-#include "ftxui/component/captured_mouse.hpp"  // for ftxui
-#include "ftxui/component/component.hpp"       // for Menu, Horizontal, Renderer
-#include "ftxui/component/component_base.hpp"  // for ComponentBase
-#include "ftxui/component/component_options.hpp"  // for MenuOption
-#include "ftxui/component/screen_interactive.hpp"  // for Component, ScreenInteractive
-#include "ftxui/dom/elements.hpp"  // for text, separator, bold, hcenter, vbox, hbox, gauge, Element, operator|, border
+#include <fmt/core.h>                          // for fmt::format
+#include <fmt/os.h>
 
-#include "sl_types.hpp"
+#include "components.hpp"
 
 using namespace ftxui;
-
-struct TopBarState
-{
-    U32 changes_processed = 0;
-    U32 total_changes = 0;
-};
-
-struct AppState
-{
-    TopBarState top_bar_state;
-};
-
-Component TopBar(TopBarState* state)
-{
-    return Renderer([state] () {
-        auto logo_section = hcenter(bold(text("tabdeeli")));
-
-        if (state->total_changes == 0)
-        {
-            auto progress_bar = hbox({filler()});
-            return hbox({
-                logo_section,
-            });
-        }
-
-        double progress = double(state->changes_processed) / double(state->total_changes);
-        auto progress_bar = hbox({
-            text("Changes processed: "),
-            gauge(progress),
-            text(fmt::format("{}/{}", state->changes_processed, state->total_changes)),
-        });
-        return hbox({
-            logo_section,
-            separator(),
-            progress_bar | flex,
-        });
-    });
-}
-
-Component Rew()
-{
-    return Renderer([] () {
-        auto logo_section = hcenter(bold(text("tabdeeli")));
-
-        auto progress_bar = hbox({
-            text("Changes processed: "),
-            gauge(0.5),
-            text(fmt::format("{}/{}", 1, 2))
-        });
-
-        return hbox({
-            logo_section,
-            separator(),
-            progress_bar | flex,
-        });
-    });
-}
-
-Component App(AppState* state)
-{
-
-    auto top_bar = TopBar(&state->top_bar_state);
-    // auto top_bar = Rew();
-
-    // return Renderer(layout, [layout] () {
-    return Renderer([top_bar] () {
-        return vbox({
-            top_bar->Render(),
-        // }) | size(WIDTH, GREATER_THAN, 40) | border;
-        }) | border;
-    });
-}
+using namespace tb;
 
 int main(int argc, const char* argv[]) {
-    auto screen = ScreenInteractive::Fullscreen();
+    ScreenInteractive screen = ScreenInteractive::Fullscreen();
 
-    AppState* app_state = new AppState{};
+    AppState* app_state = new AppState {
+        .logger = fmt::output_file("log.log"),
+        .screen = &screen,
+        .top_bar_state = TopBarState {
+            .changes_processed = 0,
+            .total_changes = 0,
+        },
+        .file_picker_state = FilePickerState {
+            .selected_file = 0,
+            .file_names = {"fo", "bar"},
+            .file_contents = {"fo", "bar"},
+        },
+        .bottom_bar_state = BottomBarState {
+            .start_button_label = "Start",
+        },
+    };
 
     auto app = App(app_state);
 
