@@ -37,3 +37,4 @@ debug_build
 .idea
 .DS_Store
 *.log
+compile_commands.json
