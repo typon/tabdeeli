@@ -33,6 +33,7 @@
 
 .cache
 build
+debug_build
 .idea
 .DS_Store
 *.log
