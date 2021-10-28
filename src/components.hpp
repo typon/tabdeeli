@@ -11,7 +11,7 @@ namespace tb
 {
 
 ftxui::Component TopBar(TopBarState* state);
-ftxui::Component BottomBar(ftxui::ScreenInteractive* screen, BottomBarState* state);
+ftxui::Component BottomBar(AppState* app_state, ftxui::ScreenInteractive* screen, BottomBarState* state);
 ftxui::Component FilePicker(ftxui::ScreenInteractive* screen, FilePickerState* state);
 ftxui::Component App(AppState* state);
 

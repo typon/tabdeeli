@@ -45,24 +45,26 @@ if(NOT ag_POPULATED)
   add_subdirectory(${ag_SOURCE_DIR} ${ag_BINARY_DIR} EXCLUDE_FROM_ALL)
 endif()
 
+include_directories(external_libs/libag)
+
+include_directories(external_libs/rangeless/include)
 # ------------------------------------------------------------------------------
 
-
-
-
-project(ftxui-starter
+project(tabdeeli
   LANGUAGES CXX
   VERSION 1.0.0
 )
 
-add_executable(ftxui-starter
+add_executable(tabdeeli
     src/main.cpp
     src/components.cpp
+    src/searcher.cpp
     src/utils.cpp
 )
-target_include_directories(ftxui-starter PRIVATE src)
 
-target_link_libraries(ftxui-starter
+target_include_directories(tabdeeli PRIVATE src)
+
+target_link_libraries(tabdeeli
   PRIVATE ag
   PRIVATE fmt::fmt
   PRIVATE ftxui::screen
@@ -71,4 +73,4 @@ target_link_libraries(ftxui-starter
   PUBLIC stdc++
 )
 
-install(TARGETS ftxui-starter RUNTIME DESTINATION "bin")
+install(TARGETS tabdeeli RUNTIME DESTINATION "bin")

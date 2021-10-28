@@ -4,11 +4,26 @@
 #include "ftxui/component/screen_interactive.hpp"  // for Component, ScreenInteractive
 
 #include "sl_types.hpp"
+#include "searcher.hpp"
 
 #pragma once
 
 namespace tb
 {
+
+const static std::string NO_FILE_LOADED = "No file loaded";
+
+enum class ActionType
+{
+    FocusFilePicker
+};
+
+struct Action {
+    ActionType type;
+    union {
+        struct { int foo; };
+    };
+};
 
 struct TopBarState
 {
@@ -18,23 +33,40 @@ struct TopBarState
 
 struct BottomBarState
 {
-    std::string start_button_label;
+    std::string search_button_label;
 };
 
 struct FilePickerState
 {
     S32 selected_file;
     std::vector<std::string> file_names;
-    std::vector<std::string> file_contents;
     ftxui::MenuOption menu_options;
+    std::vector<std::string> file_names_as_displayed;
+
+    U64 min_width;
+    U64 max_width;
 };
+
+struct FileViewerState
+{
+    const std::string* file_name;
+    std::string preamble;
+    std::string prev_line;
+    std::string new_line;
+    std::string postamble;
+};
+
+using Logger = fmt::v8::ostream;
 
 struct AppState
 {
-    fmt::v8::ostream logger;
+    Logger logger;
+    Searcher searcher;
+    std::deque<Action> actions_queue;
     ftxui::ScreenInteractive* screen;
     TopBarState top_bar_state;
     FilePickerState file_picker_state;
+    FileViewerState file_viewer_state;
     BottomBarState bottom_bar_state;
 };
 

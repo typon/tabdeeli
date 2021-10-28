@@ -8,15 +8,23 @@
 #include <fmt/os.h>
 
 #include "components.hpp"
+#include "searcher.hpp"
 
 using namespace ftxui;
 using namespace tb;
 
+extern "C" {
+#include <libag.h>
+}
+
 int main(int argc, const char* argv[]) {
+
     ScreenInteractive screen = ScreenInteractive::Fullscreen();
 
     AppState* app_state = new AppState {
         .logger = fmt::output_file("log.log"),
+        .searcher = searcher::init_searcher(),
+        .actions_queue = {},
         .screen = &screen,
         .top_bar_state = TopBarState {
             .changes_processed = 0,
@@ -24,11 +32,20 @@ int main(int argc, const char* argv[]) {
         },
         .file_picker_state = FilePickerState {
             .selected_file = 0,
-            .file_names = {"fo", "bar"},
-            .file_contents = {"fo", "bar"},
+            .file_names = {},
+            .file_names_as_displayed = {},
+            .min_width = 40,
+            .max_width = 60,
+        },
+        .file_viewer_state = FileViewerState {
+            .file_name = &NO_FILE_LOADED,
+            .preamble = "",
+            .prev_line = "",
+            .new_line = "",
+            .postamble = "",
         },
         .bottom_bar_state = BottomBarState {
-            .start_button_label = "Start",
+            .search_button_label = "Search",
         },
     };
 
