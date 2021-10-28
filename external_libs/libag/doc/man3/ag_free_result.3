@@ -1,0 +1,41 @@
+.\"
+.\" Copyright 2021 Davidson Francis <davidsondfgl@gmail.com>
+.\"
+.\" Licensed under the Apache License, Version 2.0 (the "License");
+.\" you may not use this file except in compliance with the License.
+.\" You may obtain a copy of the License at
+.\"
+.\"    http://www.apache.org/licenses/LICENSE-2.0
+.\"
+.\" Unless required by applicable law or agreed to in writing, software
+.\" distributed under the License is distributed on an "AS IS" BASIS,
+.\" WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+.\" See the License for the specific language governing permissions and
+.\" limitations under the License.
+.\"
+.TH man 3 "29 May 2021" "1.0" "libag man page"
+.SH NAME
+ag_free_result \- Free a single result returned by
+.B ag_search
+.SH SYNOPSIS
+.nf
+.B #include <libag.h>
+.sp
+.BI "int ag_free_result(struct ag_result *" result ");"
+.fi
+.SH DESCRIPTION
+.BR ag_free_result ()
+frees a single result specified by
+.I result
+returned from a successful call to
+.IR ag_search .
+
+.SH RETURN VALUE
+The function does not return any value.
+
+.SH SEE ALSO
+.BR ag_free_all_results (3),
+.BR ag_search (3)
+
+.SH AUTHOR
+Davidson Francis (davidsondfgl@gmail.com)

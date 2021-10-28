@@ -1,0 +1,74 @@
+.\"
+.\" Copyright 2021 Davidson Francis <davidsondfgl@gmail.com>
+.\"
+.\" Licensed under the Apache License, Version 2.0 (the "License");
+.\" you may not use this file except in compliance with the License.
+.\" You may obtain a copy of the License at
+.\"
+.\"    http://www.apache.org/licenses/LICENSE-2.0
+.\"
+.\" Unless required by applicable law or agreed to in writing, software
+.\" distributed under the License is distributed on an "AS IS" BASIS,
+.\" WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+.\" See the License for the specific language governing permissions and
+.\" limitations under the License.
+.\"
+.TH man 3 "11 June 2021" "1.0" "libag man page"
+.SH NAME
+ag_search_ts \- Searches for a given pattern on a given path (thread-safe)
+.SH SYNOPSIS
+.nf
+.B #include <libag.h>
+.sp
+.BI "struct ag_result **ag_search_ts(char *" query ", int " npaths ,
+.BI "	char **" target_paths ", size_t *" nresults ");"
+.fi
+.SH DESCRIPTION
+The
+.BR ag_search_ts ()
+function searches for
+.I query
+on all paths given in the
+.I target_paths
+list. The
+.I npaths
+specify the number of paths (whether files or directories) contained
+in
+.IR target_paths .
+When a successful call to
+.BR ag_search ()
+is made, the number of results is saved in
+.IR nresults .
+
+.SH RETURN VALUE
+On success, returns a list of (struct ag_result*) containing all the results
+found. It is up to the user to free the results, whether with
+.BR ag_free_result ()
+or
+.BR ag_free_all_results ().
+On error, returns NULL and
+.I nresults
+is set to zero.
+
+.SH NOTES
+Please note that this version is the same as
+.BR ag_search ()
+but thread-safe.
+
+Also note that the thread-safe version here is the most rudimentary
+implementation possible: just one lock on the entire function. Which
+implies that parallel calls to this function will not be parallel, but
+sequential.
+
+A more efficient implementation is needed. See the issues on GitHub for a
+breakdown of this.
+
+.SH SEE ALSO
+.BR ag_search (3),
+.BR ag_free_result (3),
+.BR ag_free_all_results (3),
+.BR ag_init_config (3),
+.BR ag_set_config (3)
+
+.SH AUTHOR
+Davidson Francis (davidsondfgl@gmail.com)

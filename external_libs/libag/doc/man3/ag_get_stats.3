@@ -1,0 +1,50 @@
+.\"
+.\" Copyright 2021 Davidson Francis <davidsondfgl@gmail.com>
+.\"
+.\" Licensed under the Apache License, Version 2.0 (the "License");
+.\" you may not use this file except in compliance with the License.
+.\" You may obtain a copy of the License at
+.\"
+.\"    http://www.apache.org/licenses/LICENSE-2.0
+.\"
+.\" Unless required by applicable law or agreed to in writing, software
+.\" distributed under the License is distributed on an "AS IS" BASIS,
+.\" WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+.\" See the License for the specific language governing permissions and
+.\" limitations under the License.
+.\"
+.TH man 3 "29 May 2021" "1.0" "libag man page"
+.SH NAME
+ag_get_stats \- If enabled, retrieve the stats for the latest search
+.SH SYNOPSIS
+.nf
+.B #include <libag.h>
+.sp
+.BI "int ag_get_stats(struct ag_search_stats *" stats ");"
+.fi
+.SH DESCRIPTION
+If stats are enabled,
+.BR ag_get_stats ()
+function gets the stats for the latest
+.I ag_search
+call and saves it into
+.IR stats .
+The stats contains:
+
+.PP
+.RS 2
+.IP \(em 2
+Total bytes searched
+.IP \(em 2
+Total files read
+.IP \(em 2
+Total matches
+.IP \(em 2
+Total files with matches
+.PP
+
+.SH RETURN VALUE
+Returns 0 if success, -1 otherwise.
+
+.SH AUTHOR
+Davidson Francis (davidsondfgl@gmail.com)

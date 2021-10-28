@@ -1,0 +1,42 @@
+.\"
+.\" Copyright 2021 Davidson Francis <davidsondfgl@gmail.com>
+.\"
+.\" Licensed under the Apache License, Version 2.0 (the "License");
+.\" you may not use this file except in compliance with the License.
+.\" You may obtain a copy of the License at
+.\"
+.\"    http://www.apache.org/licenses/LICENSE-2.0
+.\"
+.\" Unless required by applicable law or agreed to in writing, software
+.\" distributed under the License is distributed on an "AS IS" BASIS,
+.\" WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+.\" See the License for the specific language governing permissions and
+.\" limitations under the License.
+.\"
+.TH man 3 "29 May 2021" "1.0" "libag man page"
+.SH NAME
+ag_set_config \- Sets the libag behavior with user-supplied settings
+.SH SYNOPSIS
+.nf
+.B #include <libag.h>
+.sp
+.BI "int ag_set_config(struct ag_config *" ag_config ");"
+.fi
+.SH DESCRIPTION
+The
+.BR ag_set_config ()
+function sets the current libag settings with user-supplied attributes
+specified by \fIag_config\fP. The structure \fIag_config\fP defines a
+set of attributes that enables/disables and configure the
+specific behavior of libag.
+
+.SH RETURN VALUE
+Returns 0 if success (i.e: valid
+.I ag_config
+and valid attributes), -1 otherwise.
+
+.SH SEE ALSO
+.BR ag_init_config (3)
+
+.SH AUTHOR
+Davidson Francis (davidsondfgl@gmail.com)
