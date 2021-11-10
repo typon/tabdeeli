@@ -60,6 +60,7 @@ add_executable(tabdeeli
     src/components.cpp
     src/searcher.cpp
     src/utils.cpp
+    src/styled_button.cpp
 )
 
 target_include_directories(tabdeeli PRIVATE src)

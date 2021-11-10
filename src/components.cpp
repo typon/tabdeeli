@@ -7,6 +7,8 @@
 
 using namespace ftxui;
 
+using ftxui_extras::StyledButton;
+
 namespace tb
 {
 
@@ -102,23 +104,35 @@ Component
 BottomBar(AppState* app_state, ScreenInteractive* screen, BottomBarState* state)
 {
 
-    auto search_button = Button(&state->search_button_label, [app_state] () {
+    auto search_button = StyledButton(&state->search_button_label, bgcolor(Color::Blue), [app_state] () {
         searcher::execute_search(&app_state->searcher, &app_state->logger);
         log(app_state, "pre, populating picker state");
         populate_file_picker_state(app_state);
     });
 
-    auto layout = Container::Horizontal({
-        search_button,
+    auto commit_button = StyledButton(&state->commit_button_label, bgcolor(Color::Green), [app_state] () {
+        log(app_state, "pre, committed");
     });
 
-    return Renderer(layout, [state, search_button] () {
+    auto cancel_button = StyledButton(&state->cancel_button_label, bgcolor(Color::RedLight), [app_state] () {
+        log(app_state, "pre, canceled");
+    });
+
+    auto layout = Container::Horizontal({
+        search_button,
+        commit_button,
+        cancel_button,
+    });
+
+    return Renderer(layout, [state, search_button, commit_button, cancel_button] () {
         auto mode_label = bold(text("Mode: "));
 
         return hbox({
             vcenter(mode_label) | flex,
             separator(),
             search_button->Render(),
+            commit_button->Render(),
+            cancel_button->Render(),
         });
     });
 }

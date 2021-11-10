@@ -1,4 +1,5 @@
 #include <vector>
+#include <deque>
 #include <fmt/os.h>
 #include <ftxui/component/component_options.hpp>  // for MenuOption
 #include "ftxui/component/screen_interactive.hpp"  // for Component, ScreenInteractive
@@ -34,6 +35,8 @@ struct TopBarState
 struct BottomBarState
 {
     std::string search_button_label;
+    std::string commit_button_label;
+    std::string cancel_button_label;
 };
 
 struct FilePickerState

@@ -46,6 +46,8 @@ int main(int argc, const char* argv[]) {
         },
         .bottom_bar_state = BottomBarState {
             .search_button_label = "Search",
+            .commit_button_label = "Commit",
+            .cancel_button_label = "Cancel",
         },
     };
 

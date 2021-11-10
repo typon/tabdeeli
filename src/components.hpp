@@ -14,5 +14,13 @@ ftxui::Component TopBar(TopBarState* state);
 ftxui::Component BottomBar(AppState* app_state, ftxui::ScreenInteractive* screen, BottomBarState* state);
 ftxui::Component FilePicker(ftxui::ScreenInteractive* screen, FilePickerState* state);
 ftxui::Component App(AppState* state);
+}
 
+namespace ftxui_extras
+{
+ftxui::Component StyledButton(
+    ftxui::ConstStringRef label,
+    ftxui::Decorator default_style,
+    std::function<void()> on_click,
+    ftxui::Ref<ftxui::ButtonOption> = {});
 }
