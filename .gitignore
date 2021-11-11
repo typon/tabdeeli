@@ -38,3 +38,5 @@ debug_build
 .DS_Store
 *.log
 compile_commands.json
+.i3workspace.json
+.vscode
