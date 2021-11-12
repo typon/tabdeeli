@@ -23,7 +23,7 @@ Searcher init_searcher()
 
 void execute_search(Searcher* searcher, Logger* logger)
 {
-    std::vector<std::string> paths = {"/home/typon/gitz/tabdeeli/src"};
+    std::vector<String> paths = {"/home/typon/gitz/tabdeeli/src"};
 	searcher->results = ag_search("namespace", paths.size(), vector_of_strings_to_double_char_array(paths), &searcher->num_results);
 	if (not searcher->results)
     {

@@ -48,6 +48,7 @@ endif()
 include_directories(external_libs/libag)
 
 include_directories(external_libs/rangeless/include)
+include_directories(external_libs/catch2)
 # ------------------------------------------------------------------------------
 
 project(tabdeeli
@@ -59,13 +60,30 @@ add_executable(tabdeeli
     src/main.cpp
     src/components.cpp
     src/searcher.cpp
+    src/object_utils.cpp
     src/utils.cpp
     src/styled_button.cpp
+    src/serde.cpp
+)
+
+add_executable(unit_tests
+    tests/unit_tests.cpp
+    src/utils.cpp
 )
 
 target_include_directories(tabdeeli PRIVATE src)
+target_include_directories(unit_tests PRIVATE src)
 
 target_link_libraries(tabdeeli
+  PRIVATE ag
+  PRIVATE fmt::fmt
+  PRIVATE ftxui::screen
+  PRIVATE ftxui::dom
+  PRIVATE ftxui::component # Not needed for this example.
+  PUBLIC stdc++
+)
+
+target_link_libraries(unit_tests
   PRIVATE ag
   PRIVATE fmt::fmt
   PRIVATE ftxui::screen

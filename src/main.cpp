@@ -31,23 +31,33 @@ int main(int argc, const char* argv[]) {
             .total_changes = 0,
         },
         .file_picker_state = FilePickerState {
-            .selected_file = 0,
-            .file_names = {},
+            .selected_file_index = 0,
+            .file_to_matches = {},
+            .file_to_currently_selected_match = {},
             .file_names_as_displayed = {},
+            .file_names = {},
             .min_width = 40,
             .max_width = 60,
         },
         .file_viewer_state = FileViewerState {
-            .file_name = &NO_FILE_LOADED,
+            .file_name = NO_FILE_LOADED,
             .preamble = "",
             .prev_line = "",
             .new_line = "",
             .postamble = "",
         },
+        .history_viewer_state = HistoryViewerState {
+            .selected_diff = 0,
+            .diffs = {},
+            .diffs_as_displayed = {},
+            .min_width = 20,
+            .max_width = 30,
+        },
         .bottom_bar_state = BottomBarState {
             .search_button_label = "Search",
             .commit_button_label = "Commit",
             .cancel_button_label = "Cancel",
+            .replacement_mode = ReplacementMode::REGEX,
         },
     };
 
