@@ -19,6 +19,18 @@ endif()
 
 # ------------------------------------------------------------------------------
 
+add_subdirectory(external_libs/libag)
+
+# ------------------------------------------------------------------------------
+# These external dependencies could not be fetched using github directly. (above method)
+include_directories(external_libs/libag)
+include_directories(external_libs/rangeless/include)
+# ------------------------------------------------------------------------------
+
+# ------------------------------------------------------------------------------
+# Dependencies used only for development and testing
+# ------------------------------------------------------------------------------
+
 set(FETCHCONTENT_UPDATES_DISCONNECTED TRUE)
 FetchContent_Declare(fmt
   GIT_REPOSITORY https://github.com/fmtlib/fmt
@@ -34,21 +46,36 @@ endif()
 # ------------------------------------------------------------------------------
 
 set(FETCHCONTENT_UPDATES_DISCONNECTED TRUE)
-FetchContent_Declare(ag
-  GIT_REPOSITORY https://github.com/typon/libag
-  GIT_TAG 3d00785278e039ae0df2b06f10facea2bf6cf9c4
+FetchContent_Declare(rttr
+  GIT_REPOSITORY https://github.com/rttrorg/rttr
+  GIT_TAG e338d9aa47f6c7da97be88df3aaa48ac9c5fe6c6
 )
 
-FetchContent_GetProperties(ag)
-if(NOT ag_POPULATED)
-  FetchContent_Populate(ag)
-  add_subdirectory(${ag_SOURCE_DIR} ${ag_BINARY_DIR} EXCLUDE_FROM_ALL)
+FetchContent_GetProperties(rttr)
+if(NOT rttr_POPULATED)
+  FetchContent_Populate(rttr)
+  add_subdirectory(${rttr_SOURCE_DIR} ${rttr_BINARY_DIR} EXCLUDE_FROM_ALL)
 endif()
 
-include_directories(external_libs/libag)
+# ------------------------------------------------------------------------------
 
-include_directories(external_libs/rangeless/include)
+set(FETCHCONTENT_UPDATES_DISCONNECTED TRUE)
+FetchContent_Declare(nlohmann_json
+  GIT_REPOSITORY https://github.com/nlohmann/json
+  GIT_TAG 7194245a314d142a5560f6906a87f7c67ebbcf2e
+)
+
+FetchContent_GetProperties(nlohmann_json)
+if(NOT nlohmann_json_POPULATED)
+  FetchContent_Populate(nlohmann_json)
+  add_subdirectory(${nlohmann_json_SOURCE_DIR} ${nlohmann_json_BINARY_DIR} EXCLUDE_FROM_ALL)
+endif()
+
+# ------------------------------------------------------------------------------
 include_directories(external_libs/catch2)
+# ------------------------------------------------------------------------------
+
+# End of dependencies used only for development and testing
 # ------------------------------------------------------------------------------
 
 project(tabdeeli
@@ -64,15 +91,17 @@ add_executable(tabdeeli
     src/utils.cpp
     src/styled_button.cpp
     src/serde.cpp
+    src/metaprogramming.cpp
+    src/metaprogramming.hpp
 )
 
-add_executable(unit_tests
+add_executable(tabdeeli_unit_tests
     tests/unit_tests.cpp
     src/utils.cpp
 )
 
 target_include_directories(tabdeeli PRIVATE src)
-target_include_directories(unit_tests PRIVATE src)
+target_include_directories(tabdeeli_unit_tests PRIVATE src)
 
 target_link_libraries(tabdeeli
   PRIVATE ag
@@ -80,15 +109,19 @@ target_link_libraries(tabdeeli
   PRIVATE ftxui::screen
   PRIVATE ftxui::dom
   PRIVATE ftxui::component # Not needed for this example.
+  PRIVATE RTTR
+  PRIVATE nlohmann_json::nlohmann_json
   PUBLIC stdc++
 )
 
-target_link_libraries(unit_tests
+target_link_libraries(tabdeeli_unit_tests
   PRIVATE ag
   PRIVATE fmt::fmt
   PRIVATE ftxui::screen
   PRIVATE ftxui::dom
   PRIVATE ftxui::component # Not needed for this example.
+  PRIVATE RTTR
+  PRIVATE nlohmann_json::nlohmann_json
   PUBLIC stdc++
 )
 
