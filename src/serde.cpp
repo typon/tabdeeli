@@ -1,5 +1,3 @@
-#pragma once
-
 #include "serde.hpp"
 
 namespace tb

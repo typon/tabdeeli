@@ -15,6 +15,9 @@ void log(Logger* logger, std::string_view msg);
 Char** vector_of_strings_to_double_char_array(const std::vector<String>& strings);
 FileManager read_file_into_file_manager(const String& file_name);
 std::tuple<String, String> get_surrounding_lines_for_byte_slice(const FileManager&, ByteSlice);
+std::string trim(const std::string &s);
+std::string rtrim(const std::string &s);
+std::string ltrim(const std::string &s);
 }
 
 namespace tb::functional

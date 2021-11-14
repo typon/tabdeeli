@@ -26,6 +26,11 @@ enum class ReplacementMode
     PYTHON,
 };
 
+struct Foo
+{
+    StringRef bar;
+};
+
 struct ByteSlice
 {
     U64 start;

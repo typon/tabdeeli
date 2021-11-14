@@ -6,7 +6,7 @@
 
 using json = nlohmann::json;
 
-namespace tt::meta
+namespace tb::meta
 {
 
 using namespace rttr;
@@ -34,7 +34,7 @@ std::tuple<Result...> vec_to_tup(std::vector<variant> values)
 
 } // end namespace tt::meta
 
-namespace tt
+namespace tb
 {
 
 template <typename T>
@@ -42,7 +42,7 @@ struct Hasher
 {
     std::size_t operator()(const T& obj) const
     {
-        return std::hash<std::string>()(tt::meta::to_string(obj));
+        return std::hash<std::string>()(tb::meta::to_string(obj));
     }
 };
 

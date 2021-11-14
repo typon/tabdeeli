@@ -1,5 +1,6 @@
 #include <cassert>
 #include <fstream>
+#include <regex>
 
 #include "state.hpp"
 
@@ -32,6 +33,18 @@ vector_of_strings_to_double_char_array(const std::vector<String>& strings)
         result[index] = const_cast<Char*>(string.c_str());
     }
     return result;
+}
+
+std::string ltrim(const std::string &s) {
+    return std::regex_replace(s, std::regex("^\\s+"), std::string(""));
+}
+
+std::string rtrim(const std::string &s) {
+    return std::regex_replace(s, std::regex("\\s+$"), std::string(""));
+}
+
+std::string trim(const std::string &s) {
+    return ltrim(rtrim(s));
 }
 
 FileManager

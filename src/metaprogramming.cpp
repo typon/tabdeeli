@@ -4,123 +4,118 @@
 #include <rttr/registration>
 
 #include "metaprogramming.hpp"
-#include "tables.hpp"
+
+#include "state.hpp"
 
 using json = nlohmann::json;
 
-using tt::TensorDataId;
-using tt::TensorId;
-using tt::OpId;
-using tt::Shape;
-using tt::Tensor;
-using tt::BufferSize;
-using tt::TensorData;
-using tt::Op;
-using tt::Tensor_Op_Association;
-using tt::Tensor_TensorData_Association;
-
-using tt::Edge;
-using tt::EdgeId;
-using tt::Graph;
-using tt::GraphId;
-using tt::Node;
-using tt::NodeId;
-using tt::NodeType;
-using tt::Node_Edge_Association;
-using tt::Node_UserEdge_Association;
-using tt::Node_OperandEdge_Association;
+using tb::Foo;
+using tb::ByteSlice;
+using tb::FileManager;
 
 RTTR_REGISTRATION
 {
     using namespace rttr;
-    registration::class_<Shape>("Shape")
-                 .property("x", &Shape::x)
-                 .property("y", &Shape::y)
-                 .property("z", &Shape::z)
-                 .property("w", &Shape::w)
+    registration::class_<Foo>("Foo")
+                 .property("bar", &Foo::bar)
     ;
-    registration::class_<TensorId>("TensorId")
-                 .property("id", &TensorId::id)
+    registration::class_<ByteSlice>("ByteSlice")
+                 .property("start", &ByteSlice::start)
+                 .property("end", &ByteSlice::end)
     ;
-    registration::class_<TensorDataId>("TensorDataId")
-                 .property("id", &TensorDataId::id)
+    registration::class_<FileManager>("FileManager")
+                 .property("file_name", &FileManager::file_name)
+                 .property("contents", &FileManager::contents)
+                 .property("line_start_byte_indices", &FileManager::line_start_byte_indices)
+                 .property("match_byte_slices", &FileManager::match_byte_slices)
     ;
-    registration::class_<OpId>("OpId")
-                 .property("id", &OpId::id)
-    ;
-    registration::class_<Tensor>("Tensor")
-                 .property("id", &Tensor::id)
-                 .property("shape", &Tensor::shape)
-                 .property("shape_ptr", &Tensor::shape)(policy::prop::bind_as_ptr)
-    ;
-    registration::class_<BufferSize>("BufferSize")
-                 .property("count", &BufferSize::count)
-    ;
-    registration::class_<TensorData>("TensorData")
-                 .property("id", &TensorData::id)
-                 .property("data", &TensorData::data)
-                 .property("size", &TensorData::size)
-    ;
-    registration::class_<Op>("Op")
-                 .property("id", &Op::id)
-                 .property("type", &Op::type)
-    ;
-    registration::class_<Tensor_Op_Association>("Tensor_Op_Association")
-                 .property("tensor_id", &Tensor_Op_Association::tensor_id)
-                 .property("op_id", &Tensor_Op_Association::op_id)
-                 .property("tensor_type", &Tensor_Op_Association::tensor_type)
-    ;
-    registration::class_<Tensor_TensorData_Association>("Tensor_TensorData_Association")
-                 .property("tensor_id", &Tensor_TensorData_Association::tensor_id)
-                 .property("tensor_data_id", &Tensor_TensorData_Association::tensor_data_id)
-    ;
-    registration::class_<EdgeId>("EdgeId")
-                 .property("id", &EdgeId::id)
-    ;
-    registration::class_<NodeId>("NodeId")
-                 .property("id", &NodeId::id)
-    ;
-    registration::class_<GraphId>("GraphId")
-                 .property("id", &Graph::id)
-    ;
-    registration::class_<Node>("Node")
-                 .property("id", &Node::id)
-                 .property("graph_id", &Node::graph_id)
-                 .property("name", &Node::name)
-                 .property("type", &Node::type)
-    ;
-    registration::class_<Edge>("Edge")
-                 .property("id", &Edge::id)
-                 .property("src", &Edge::src)
-                 .property("sink", &Edge::sink)
-    ;
-    registration::class_<Graph>("Graph")
-                 .property("id", &Graph::id)
-    ;
-
-    registration::class_<Node_Edge_Association>("Node_Edge_Association")
-                 .property("node_id", &Node_Edge_Association::node_id)
-                 .property("edge_id", &Node_Edge_Association::edge_id)
-    ;
-    registration::class_<Node_OperandEdge_Association>("Node_OperandEdge_Association")
-                 .property("id", &Node_OperandEdge_Association::id)
-                 .property("sink", &Node_OperandEdge_Association::sink)
-    ;
-    registration::class_<Node_UserEdge_Association>("Node_UserEdge_Association")
-                 .property("id", &Node_UserEdge_Association::id)
-                 .property("src", &Node_UserEdge_Association::src)
-    ;
+/*     registration::class_<TensorId>("TensorId") */
+/*                  .property("id", &TensorId::id) */
+/*     ; */
+/*     registration::class_<TensorDataId>("TensorDataId") */
+/*                  .property("id", &TensorDataId::id) */
+/*     ; */
+/*     registration::class_<OpId>("OpId") */
+/*                  .property("id", &OpId::id) */
+/*     ; */
+/*     registration::class_<Tensor>("Tensor") */
+/*                  .property("id", &Tensor::id) */
+/*                  .property("shape", &Tensor::shape) */
+/*                  .property("shape_ptr", &Tensor::shape)(policy::prop::bind_as_ptr) */
+/*     ; */
+/*     registration::class_<BufferSize>("BufferSize") */
+/*                  .property("count", &BufferSize::count) */
+/*     ; */
+/*     registration::class_<TensorData>("TensorData") */
+/*                  .property("id", &TensorData::id) */
+/*                  .property("data", &TensorData::data) */
+/*                  .property("size", &TensorData::size) */
+/*     ; */
+/*     registration::class_<Op>("Op") */
+/*                  .property("id", &Op::id) */
+/*                  .property("type", &Op::type) */
+/*     ; */
+/*     registration::class_<Tensor_Op_Association>("Tensor_Op_Association") */
+/*                  .property("tensor_id", &Tensor_Op_Association::tensor_id) */
+/*                  .property("op_id", &Tensor_Op_Association::op_id) */
+/*                  .property("tensor_type", &Tensor_Op_Association::tensor_type) */
+/*     ; */
+/*     registration::class_<Tensor_TensorData_Association>("Tensor_TensorData_Association") */
+/*                  .property("tensor_id", &Tensor_TensorData_Association::tensor_id) */
+/*                  .property("tensor_data_id", &Tensor_TensorData_Association::tensor_data_id) */
+/*     ; */
+/*     registration::class_<EdgeId>("EdgeId") */
+/*                  .property("id", &EdgeId::id) */
+/*     ; */
+/*     registration::class_<NodeId>("NodeId") */
+/*                  .property("id", &NodeId::id) */
+/*     ; */
+/*     registration::class_<GraphId>("GraphId") */
+/*                  .property("id", &Graph::id) */
+/*     ; */
+/*     registration::class_<Node>("Node") */
+/*                  .property("id", &Node::id) */
+/*                  .property("graph_id", &Node::graph_id) */
+/*                  .property("name", &Node::name) */
+/*                  .property("type", &Node::type) */
+/*     ; */
+/*     registration::class_<Edge>("Edge") */
+/*                  .property("id", &Edge::id) */
+/*                  .property("src", &Edge::src) */
+/*                  .property("sink", &Edge::sink) */
+/*     ; */
+/*     registration::class_<Graph>("Graph") */
+/*                  .property("id", &Graph::id) */
+/*     ; */
+/*  */
+/*     registration::class_<Node_Edge_Association>("Node_Edge_Association") */
+/*                  .property("node_id", &Node_Edge_Association::node_id) */
+/*                  .property("edge_id", &Node_Edge_Association::edge_id) */
+/*     ; */
+/*     registration::class_<Node_OperandEdge_Association>("Node_OperandEdge_Association") */
+/*                  .property("id", &Node_OperandEdge_Association::id) */
+/*                  .property("sink", &Node_OperandEdge_Association::sink) */
+/*     ; */
+/*     registration::class_<Node_UserEdge_Association>("Node_UserEdge_Association") */
+/*                  .property("id", &Node_UserEdge_Association::id) */
+/*                  .property("src", &Node_UserEdge_Association::src) */
+/*     ; */
 }
 
 
-namespace tt::meta
+namespace tb::meta
 {
 
 using namespace rttr;
 
 bool is_primitive_type(const type& obj_type)
 {
-    return obj_type.is_arithmetic() or (obj_type == type::get<std::string>()) or obj_type.is_enumeration();
+    return
+        obj_type.is_arithmetic()
+        or (obj_type == type::get<std::string>())
+        or (obj_type == type::get<String>())
+        or (obj_type == type::get<StringRef>())
+        or obj_type.is_enumeration();
 }
 
 json to_json_primitive_type(const variant& object)
@@ -154,7 +149,11 @@ json to_json_primitive_type(const variant& object)
         else
             throw;
     }
-    else if (obj_type == type::get<std::string>())
+    else if (obj_type == type::get<String>())
+    {
+        result = object.to_string();
+    }
+    else if (obj_type == type::get<StringRef>())
     {
         result = object.to_string();
     }
@@ -226,10 +225,11 @@ std::string to_string(instance object)
     {
         return "unregistered_type!";
     }
-    std::string guts_as_string = to_json(object).dump();
+    U32 indent = 4;
+    std::string guts_as_string = to_json(object).dump(indent);
 
     type obj_type = object.get_type();
-    return fmt::format("{}{}", obj_type.get_name().to_string(), guts_as_string);
+    return fmt::format("{} {}", obj_type.get_name().to_string(), guts_as_string);
 }
 
 bool generic_eq_operator(instance a, instance b)
@@ -240,7 +240,7 @@ bool generic_eq_operator(instance a, instance b)
     {
         throw;
     }
-    return tt::meta::to_json(a) == tt::meta::to_json(b);
+    return tb::meta::to_json(a) == tb::meta::to_json(b);
 }
 
 bool generic_neq_operator(instance a, instance b)
