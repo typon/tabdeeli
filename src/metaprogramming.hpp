@@ -11,8 +11,8 @@ namespace tb::meta
 
 using namespace rttr;
 json to_json_variant(const variant& object);
-json to_json(instance object);
-std::string to_string(instance object);
+json to_json(const variant& object);
+std::string to_string(const variant& object);
 bool generic_eq_operator(instance a, instance b);
 bool generic_neq_operator(instance a, instance b);
 

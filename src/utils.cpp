@@ -1,8 +1,12 @@
 #include <cassert>
 #include <fstream>
 #include <regex>
+#include <fmt/core.h>                          // for fmt::format
 
 #include "state.hpp"
+#include "metaprogramming.hpp"
+
+using tb::meta::to_string;
 
 namespace tb
 {
@@ -97,38 +101,56 @@ read_file_into_file_manager(const String& file_name)
     return result;
 }
 
-std::tuple<String, String>
-get_surrounding_lines_for_byte_slice(const FileManager& file_manager, ByteSlice byte_slice)
+std::string_view
+get_line_starting_at_byte(const FileManager& file_manager, ByteSlice line_slice)
 {
+    return std::string_view(file_manager.contents.data() + line_slice.start, line_slice.end);
+}
 
-    U32 left_idx = 0;
-    U32 right_idx = file_manager.line_start_byte_indices.size() - 1;
+std::tuple<std::string_view, std::string_view>
+get_surrounding_lines_for_byte_slice(const FileManager& file_manager, ByteSlice byte_slice)
+{}
+
+std::tuple<U32, U32>
+get_surrounding_line_indices_for_byte_slice(const FileManager& file_manager, ByteSlice byte_slice)
+{
+    if (byte_slice.start > byte_slice.end)
+    {
+        throw std::runtime_error("byte slice ill-formed");
+    }
 
     // [0, 10, 20, 30, 50, 52, 110]
 
     // (21, 31)
-    auto start_line_iter = std::lower_bound(file_manager.line_start_byte_indices.begin(), file_manager.line_start_byte_indices.end(), byte_slice.start);
-    auto end_line_iter = std::upper_bound(file_manager.line_start_byte_indices.begin(), file_manager.line_start_byte_indices.end(), byte_slice.end);
+    auto start_line_iter =
+        std::lower_bound(
+            file_manager.line_start_byte_indices.begin(),
+            file_manager.line_start_byte_indices.end(),
+            byte_slice.start);
+    auto end_line_iter =
+        std::upper_bound(
+            file_manager.line_start_byte_indices.begin(),
+            file_manager.line_start_byte_indices.end(),
+            byte_slice.end);
 
-    // Binary search for line(s) which contain this given byte slice
-/*     while (true) */
-/*     { */
-/*         U32 mid_idx = (left_idx + right_idx) / 2; */
-/*         U32 line_start_byte = file_manager.line_start_byte_indices.at(mid_idx); */
-/*         // This line start byte is too low */
-/*         // This means the starting line must be found between left_idx and mid_idx - 1 */
-/*         if (line_start_byte <= byte_slice.start) */
-/*         { */
-/*             right_idx = mid_idx - 1; */
-/*         } */
-/*         else if (line_start_byte <= byte_slice.start) */
-/*         { */
-/*         } */
-/*  */
-/*  */
-/*     } */
+    S32 start_line_index = std::distance(file_manager.line_start_byte_indices.begin(), start_line_iter);
+    S32 end_line_index = std::distance(file_manager.line_start_byte_indices.begin(), end_line_iter);
 
+    if (start_line_index > 0)
+    {
+        // std::lower_bound returns the element AFTER the one in which the start_byte_index appears
+        start_line_index = start_line_index - 1;
+    }
+    if (end_line_index > 0)
+    {
+        // std::upper_bound returns the element AFTER the one in which the end_byte_index appears
+        end_line_index = end_line_index - 1;
+    }
 
+    /* fmt::print("\nline_start_byte: {}\n", to_string(file_manager.line_start_byte_indices)); */
+    /* fmt::print("\nbyte_slice: {}, start: {}, end: {}\n", to_string(byte_slice), start_line_index, end_line_index); */
+
+    return {start_line_index, end_line_index};
 }
 
 } // end of namespace

@@ -198,6 +198,10 @@ json to_json_variant(const variant& object)
     {
         result = to_json_primitive_type(object);
     }
+    else if (is_primitive_type(obj_type.get_wrapped_type()))
+    {
+        result = to_json_primitive_type(object.extract_wrapped_value());
+    }
     else
     {
         result = to_json_aggregate_type(object);
@@ -206,7 +210,7 @@ json to_json_variant(const variant& object)
     return result;
 }
 
-json to_json(instance object)
+json to_json(const variant& object)
 {
     json result;
 
@@ -214,10 +218,21 @@ json to_json(instance object)
     {
         return result;
     }
-    return to_json_aggregate_type(object);
+    else if (object.is_sequential_container())
+    {
+        for (const auto& item: object.create_sequential_view())
+        {
+            result.push_back(to_json(item));
+        }
+        return result;
+    }
+    else
+    {
+        return to_json_variant(object);
+    }
 }
 
-std::string to_string(instance object)
+std::string to_string(const variant& object)
 {
     std::string result;
 
@@ -232,7 +247,7 @@ std::string to_string(instance object)
     return fmt::format("{} {}", obj_type.get_name().to_string(), guts_as_string);
 }
 
-bool generic_eq_operator(instance a, instance b)
+bool generic_eq_operator(const variant& a, const variant& b)
 {
     // A simple comparator, leveraging the json implementation.
     rttr::type obj_type = a.get_type();
@@ -243,7 +258,7 @@ bool generic_eq_operator(instance a, instance b)
     return tb::meta::to_json(a) == tb::meta::to_json(b);
 }
 
-bool generic_neq_operator(instance a, instance b)
+bool generic_neq_operator(const variant& a, const variant& b)
 {
     return not generic_eq_operator(a, b);
 }
