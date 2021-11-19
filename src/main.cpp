@@ -42,8 +42,8 @@ int main(int argc, const char* argv[]) {
         .file_viewer_state = FileViewerState {
             .file_name = NO_FILE_LOADED,
             .preamble = "",
-            .prev_line = "",
-            .new_line = "",
+            .prev_lines = {},
+            .new_lines = {},
             .postamble = "",
         },
         .history_viewer_state = HistoryViewerState {

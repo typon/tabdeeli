@@ -1,7 +1,10 @@
 #pragma once
 
 #include <optional>
+#include <algorithm>
 #include <fn.hpp>
+
+#include "ftxui/dom/elements.hpp"  // for text, separator, bold, hcenter, vbox, hbox, gauge, Element, operator|, border
 
 #include "state.hpp"
 
@@ -14,8 +17,8 @@ void log(AppState* state, std::string_view msg);
 void log(Logger* logger, std::string_view msg);
 Char** vector_of_strings_to_double_char_array(const std::vector<String>& strings);
 FileManager read_file_into_file_manager(const String& file_name);
-std::tuple<std::string_view, std::string_view> get_surrounding_lines_for_byte_slice(const FileManager&, ByteSlice);
-std::tuple<U32, U32> get_surrounding_line_indices_for_byte_slice(const FileManager&, ByteSlice);
+std::vector<FileLine> get_lines_spanning_byte_slice(const FileManager&, ByteSlice);
+std::tuple<U32, U32> get_line_indices_spanning_byte_slice(const FileManager&, ByteSlice);
 std::string trim(const std::string &s);
 std::string rtrim(const std::string &s);
 std::string ltrim(const std::string &s);
@@ -32,7 +35,6 @@ static auto keys = [](const auto& map)
             return std::cref(pair.get().first);
         });
 };
-
 
 static auto sorted_keys = [](const auto& map)
 {
@@ -90,6 +92,33 @@ static auto get_from_map_by_value = [](const auto& map, const auto& key)
     {
         return std::make_optional(item_iterator->second);
     }
+};
+
+static auto text_views_from_file_lines = [](const auto& file_lines)
+{
+    using namespace ftxui;
+
+    /* U32 max_lineno = 0; */
+    /* for (const FileLine& file_line: file_lines) */
+    /* { */
+    /*     max_lineno = std::max(max_lineno, file_line.lineno); */
+    /* } */
+    /* U32 max_num_digits_in_lineno = 0; do { max_lineno /= 10; max_num_digits_in_lineno++; } while (max_lineno != 0); */
+
+    return
+        fn::refs(file_lines)
+        % fn::transform([&](const FileLine& file_line) {
+            S32 tmp_lineno = file_line.lineno;
+            S32 num_digits_in_lineno = 0; do { tmp_lineno /= 10; num_digits_in_lineno++; } while (tmp_lineno != 0);
+            S32 gutter_width = std::max(num_digits_in_lineno, 4);
+
+            return hbox({
+                color(Color::GrayLight, text(fmt::format("{:>{}}", file_line.lineno + 1, gutter_width))) | bold | size(WIDTH, EQUAL, gutter_width),
+                color(Color::GrayLight, text("| ")),
+                text(file_line.content) | flex_grow,
+            });
+        })
+        % fn::to_vector();
 };
 
 } // end namespace tb::functional

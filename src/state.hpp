@@ -37,6 +37,12 @@ struct ByteSlice
     U64 end;
 };
 
+struct FileLine
+{
+    std::string content;
+    U32 lineno;
+};
+
 struct FileManager
 {
     StringRef file_name;
@@ -93,8 +99,8 @@ struct FileViewerState
     StringRef file_name;
     U32 current_diff_index;
     String preamble;
-    String prev_line;
-    String new_line;
+    std::vector<FileLine> prev_lines;
+    std::vector<FileLine> new_lines;
     String postamble;
 };
 

@@ -14,7 +14,7 @@ namespace tb
 void
 log(AppState* state, std::string_view msg)
 {
-    state->logger.print(msg);
+    state->logger.print("{}", msg);
     state->logger.print("\n");
     state->logger.flush();
 }
@@ -22,7 +22,7 @@ log(AppState* state, std::string_view msg)
 void
 log(Logger* logger, std::string_view msg)
 {
-    logger->print(msg);
+    logger->print("{}", msg);
     logger->print("\n");
     logger->flush();
 }
@@ -107,12 +107,8 @@ get_line_starting_at_byte(const FileManager& file_manager, ByteSlice line_slice)
     return std::string_view(file_manager.contents.data() + line_slice.start, line_slice.end);
 }
 
-std::tuple<std::string_view, std::string_view>
-get_surrounding_lines_for_byte_slice(const FileManager& file_manager, ByteSlice byte_slice)
-{}
-
 std::tuple<U32, U32>
-get_surrounding_line_indices_for_byte_slice(const FileManager& file_manager, ByteSlice byte_slice)
+get_line_indices_spanning_byte_slice(const FileManager& file_manager, ByteSlice byte_slice)
 {
     if (byte_slice.start > byte_slice.end)
     {
@@ -136,9 +132,13 @@ get_surrounding_line_indices_for_byte_slice(const FileManager& file_manager, Byt
     S32 start_line_index = std::distance(file_manager.line_start_byte_indices.begin(), start_line_iter);
     S32 end_line_index = std::distance(file_manager.line_start_byte_indices.begin(), end_line_iter);
 
-    if (start_line_index > 0)
+    if (
+        start_line_index >= file_manager.line_start_byte_indices.size() // start_byte was outside the file
+        or byte_slice.start < file_manager.line_start_byte_indices.at(start_line_index))
     {
         // std::lower_bound returns the element AFTER the one in which the start_byte_index appears
+        // However, if the start_byte happens to be the SAME as the line start, then we need to not decrement
+        // because lower_bound gives the element thats strictly GREATER, not EQUAL
         start_line_index = start_line_index - 1;
     }
     if (end_line_index > 0)
@@ -151,6 +151,25 @@ get_surrounding_line_indices_for_byte_slice(const FileManager& file_manager, Byt
     /* fmt::print("\nbyte_slice: {}, start: {}, end: {}\n", to_string(byte_slice), start_line_index, end_line_index); */
 
     return {start_line_index, end_line_index};
+}
+
+std::vector<FileLine>
+get_lines_spanning_byte_slice(const FileManager& file_manager, ByteSlice byte_slice)
+{
+    const auto& [start_line, end_line] = get_line_indices_spanning_byte_slice(file_manager, byte_slice);
+
+    std::vector<FileLine> result;
+    for (U32 lineno = start_line; lineno <= end_line; lineno++)
+    {
+        U64 start_byte = file_manager.line_start_byte_indices.at(lineno);
+        U64 end_byte =
+            (lineno == file_manager.line_start_byte_indices.size() - 1) ?
+                file_manager.contents.size() - 1 :
+                file_manager.line_start_byte_indices.at(lineno + 1) - 1; // - 1 to discount \n
+        U64 num_bytes = end_byte - start_byte;
+        result.push_back(FileLine{.content = file_manager.contents.substr(start_byte, num_bytes), .lineno = lineno });
+    }
+    return result;
 }
 
 } // end of namespace

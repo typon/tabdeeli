@@ -41,10 +41,22 @@ populate_file_viewer_state(AppState* app_state)
         file_manager_opt.emplace(read_file_into_file_manager(file_name));
         file_picker->file_managers.insert({selected_file_index, file_manager_opt.value()});
     }
-    const auto& [prev_line, new_line] = get_surrounding_lines_for_byte_slice(file_manager_opt.value(), byte_slice_from_match(match));
 
+    log(app_state, fmt::format("match: {}->{}", match.byte_start, match.byte_end));
+    std::string x = file_manager_opt.value().contents;
+    if (std::string(file_manager_opt.value().file_name) == "/home/typon/gitz/tabdeeli/src/object_utils.cpp")
+    {
+        x = x.substr(0, 90);
+    }
+    else {
+    x = x.substr(0, 40);
+    }
+    /* std::string x = "hell"; */
+    assert(x.size() > 0);
+    log(app_state, x);
+    file_viewer->prev_lines = get_lines_spanning_byte_slice(file_manager_opt.value(), byte_slice_from_match(match));
 
-    log(app_state, "lew ");
+    log(app_state, fmt::format("num_lines: {}", file_viewer->prev_lines.size()));
 
 }
 
@@ -176,11 +188,14 @@ FileViewer(AppState* app_state, FileViewerState* state)
     return Renderer([app_state, state] () {
         populate_file_viewer_state(app_state);
 
+        auto prev_lines_view = vbox(functional::text_views_from_file_lines(state->prev_lines));
+        auto new_lines_view = vbox(functional::text_views_from_file_lines(state->new_lines));
+
         return window(text(state->file_name),
                         vbox({
                             hflow(paragraph(state->preamble)),
-                            text(state->prev_line),
-                            text(state->new_line),
+                            prev_lines_view,
+                            new_lines_view,
                             hflow(paragraph(state->postamble)),
                         })
         );
