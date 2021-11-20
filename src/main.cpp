@@ -3,9 +3,13 @@
 #include <string>             // for string, basic_string, operator+, to_string
 #include <vector>             // for vector
 #include <unordered_map>      // for unordered_map
+#include <sstream>            // for std::stringstream, std::stringbuf
+
 
 #include <fmt/core.h>                          // for fmt::format
 #include <fmt/os.h>
+
+#include <clipp.h>
 
 #include "components.hpp"
 #include "searcher.hpp"
@@ -17,7 +21,26 @@ extern "C" {
 #include <libag.h>
 }
 
-int main(int argc, const char* argv[]) {
+int main(int argc, char* argv[]) {
+
+    String search_text;
+    String replacement_text;
+    String search_directory = "./";
+
+    auto cli = clipp::with_prefixes_short_long("-", "--",
+        clipp::option("s", "search-regex").doc("search regex string") & clipp::value("search_regex", search_text),
+        clipp::option("r", "replacement-string").doc("replacement text string") & clipp::value("replacement_string", replacement_text),
+        clipp::option("d", "search-directory").doc("top level directory to launch search") & clipp::value("search_directory", search_directory)
+    );
+
+    auto parse_result = clipp::parse(argc, argv, cli);
+    if (not parse_result)
+    {
+        std::stringstream ss;
+        ss << make_man_page(cli, argv[0]);
+        fmt::print("{}", ss.str());
+        return -1;
+    }
 
     ScreenInteractive screen = ScreenInteractive::Fullscreen();
 
@@ -54,6 +77,9 @@ int main(int argc, const char* argv[]) {
             .max_width = 30,
         },
         .bottom_bar_state = BottomBarState {
+            .search_text = search_text,
+            .replacement_text = replacement_text,
+            .search_directory = search_directory,
             .search_button_label = "Search",
             .commit_button_label = "Commit",
             .cancel_button_label = "Cancel",
@@ -63,7 +89,7 @@ int main(int argc, const char* argv[]) {
 
     auto app = App(app_state);
 
-    screen.Loop(app);
+    screen.Loop(app.self);
 }
 
 // Copyright 2020 Arthur Sonzogni. All rights reserved.

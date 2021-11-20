@@ -26,6 +26,7 @@ add_subdirectory(external_libs/libag)
 # These external dependencies could not be fetched using github directly. (above method)
 include_directories(external_libs/libag)
 include_directories(external_libs/rangeless/include)
+include_directories(external_libs/clipp/include)
 # ------------------------------------------------------------------------------
 
 # ------------------------------------------------------------------------------

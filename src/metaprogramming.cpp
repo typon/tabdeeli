@@ -9,16 +9,12 @@
 
 using json = nlohmann::json;
 
-using tb::Foo;
 using tb::ByteSlice;
 using tb::FileManager;
 
 RTTR_REGISTRATION
 {
     using namespace rttr;
-    registration::class_<Foo>("Foo")
-                 .property("bar", &Foo::bar)
-    ;
     registration::class_<ByteSlice>("ByteSlice")
                  .property("start", &ByteSlice::start)
                  .property("end", &ByteSlice::end)
@@ -130,6 +126,8 @@ json to_json_primitive_type(const variant& object)
             result = object.to_bool();
         else if (obj_type == type::get<int>())
             result = object.to_int();
+        else if (obj_type == type::get<std::byte>())
+            result = object.to_uint8();
         else if (obj_type == type::get<uint8_t>())
             result = object.to_uint8();
         else if (obj_type == type::get<uint16_t>())

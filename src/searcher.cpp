@@ -21,10 +21,10 @@ Searcher init_searcher()
     return result;
 }
 
-void execute_search(Searcher* searcher, Logger* logger)
+void execute_search(Searcher* searcher, Logger* logger, StringRef search_text, StringRef search_directory)
 {
-    std::vector<String> paths = {"/home/typon/gitz/tabdeeli/src"};
-	searcher->results = ag_search("namespace", paths.size(), vector_of_strings_to_double_char_array(paths), &searcher->num_results);
+    std::vector<String> paths = {search_directory};
+	searcher->results = ag_search(const_cast<char*>(search_text.get().data()), paths.size(), vector_of_strings_to_double_char_array(paths), &searcher->num_results);
 	if (not searcher->results)
     {
 		log(logger, "no results_found");

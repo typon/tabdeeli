@@ -6,6 +6,7 @@
 #include "components.hpp"
 #include "ftxui/component/component_base.hpp"
 #include "utils.hpp"
+#include "metaprogramming.hpp"
 
 using namespace ftxui;
 
@@ -133,41 +134,85 @@ TopBar(TopBarState* state)
     });
 }
 
-Component
+BottomBarComponent
 BottomBar(AppState* app_state, ScreenInteractive* screen, BottomBarState* state)
 {
 
-    auto search_button = StyledButton(&state->search_button_label, bgcolor(Color::Blue), [app_state] () {
-        searcher::execute_search(&app_state->searcher, &app_state->logger);
-        log(app_state, "pre, populating picker state");
-        populate_file_picker_state(app_state);
-    });
+    auto search_button = StyledButton(&state->search_button_label,  bgcolor(Color::Blue),
+        [] () {
+            return hbox({underlined(color(Color::DarkBlue, text("S"))), text("earch")});
+        },
+        [app_state, state] () {
+            searcher::execute_search(&app_state->searcher, &app_state->logger, state->search_text, state->search_directory);
+            log(app_state, "pre, populating picker state");
+            populate_file_picker_state(app_state);
+        }
+    );
 
-    auto commit_button = StyledButton(&state->commit_button_label, bgcolor(Color::Green), [app_state] () {
-        log(app_state, "pre, committed");
-    });
+    auto commit_button = StyledButton(&state->commit_button_label, bgcolor(Color::Green),
+        [] () {
+            return hbox({underlined(color(Color::DarkGreen, text("C"))), text("ommit")});
+        },
+        [app_state] () {
+            log(app_state, "pre, committed");
+        }
+    );
 
-    auto cancel_button = StyledButton(&state->cancel_button_label, bgcolor(Color::RedLight), [app_state] () {
-        log(app_state, "pre, canceled");
-    });
+    auto cancel_button = StyledButton(&state->cancel_button_label, bgcolor(Color::RedLight),
+        [] () {
+            return hbox({text("Cance"), underlined(color(Color::DarkRed, text("l")))});
+        },
+        [app_state] () {
+            log(app_state, "pre, canceled");
+        }
+    );
+
+    InputOption search_text_input_option;
+    auto search_text_input = Input(&state->search_text, "Enter search regex...", search_text_input_option);
+    auto replacement_text_input = Input(&state->replacement_text, "Enter replacement text...", search_text_input_option);
+    auto search_directory_input = Input(&state->search_directory, "Enter search directory...", search_text_input_option);
 
     auto layout = Container::Horizontal({
+        Container::Vertical({
+            search_text_input,
+            replacement_text_input,
+            search_directory_input,
+        }),
         search_button,
         commit_button,
         cancel_button,
     });
 
-    return Renderer(layout, [state, search_button, commit_button, cancel_button] () {
+    auto self = Renderer(layout, [
+            state,
+            search_text_input,
+            replacement_text_input,
+            search_directory_input,
+            search_button,
+            commit_button,
+            cancel_button] () {
         auto mode_label = bold(text("Mode: " + replacement_mode_serialize(state->replacement_mode)));
 
         return hbox({
-            vcenter(mode_label) | flex,
+            vbox({
+                hbox({text("Search "), underlined(color(Color::GrayLight, text("r"))), text("egex: "), search_text_input->Render()}),
+                hbox({text("Replacement string: "), replacement_text_input->Render()}),
+                hbox({text("Search directory: "), search_directory_input->Render()}),
+            })| flex,
             separator(),
             search_button->Render(),
             commit_button->Render(),
             cancel_button->Render(),
         });
     });
+
+    return BottomBarComponent {
+        .self = self,
+        .search_button = search_button,
+        .commit_button = commit_button,
+        .cancel_button = cancel_button,
+        .search_text_input = search_text_input,
+    };
 }
 
 Component
@@ -214,7 +259,7 @@ HistoryViewer(ScreenInteractive* screen, HistoryViewerState* state)
     return result;
 }
 
-Component
+AppComponent
 App(AppState* state)
 {
 
@@ -229,10 +274,10 @@ App(AppState* state)
         file_picker,
         file_viewer,
         history_viewer,
-        bottom_bar,
+        bottom_bar.self,
     });
 
-    auto result = Renderer(layout, [state, top_bar, file_picker, file_viewer, history_viewer, bottom_bar] () {
+    auto self = Renderer(layout, [state, top_bar, file_picker, file_viewer, history_viewer, bottom_bar] () {
         return vbox({
             top_bar->Render(),
             separator(),
@@ -242,17 +287,16 @@ App(AppState* state)
                 history_viewer->Render() | size (WIDTH, LESS_THAN, state->history_viewer_state.max_width) | size(WIDTH, GREATER_THAN, state->history_viewer_state.min_width),
             }) | flex,
             separator(),
-            bottom_bar->Render(),
+            bottom_bar.self->Render(),
         }) | border;
     });
-    result = CatchEvent(result, [state, file_picker] (Event event) {
+    self = CatchEvent(self, [state, file_picker, bottom_bar] (Event event) {
         if (event.is_character()) {
             String character = event.character();
-            log(state, "event caught: " + character + "\n");
+            log(state, "char event caught: " + character + "\n");
             if (character == "f")
             {
                 log(state, "focusing file picker");
-                file_picker->TakeFocus();
             }
         }
         else if (event == Event::Custom)
@@ -266,9 +310,43 @@ App(AppState* state)
                 default: {}
             }
         }
+        else
+        {
+            // ALT = 27 (ASCII code)
+            // s = 115 (ASCII code)
+            if (event.input().size() == 2)
+            {
+                if (U32(event.input().at(0)) == 27 and U32(event.input().at(1)) == 's')
+                {
+                    bottom_bar.search_button->TakeFocus();
+                }
+                else if (U32(event.input().at(0)) == 27 and U32(event.input().at(1)) == 'c')
+                {
+                    bottom_bar.commit_button->TakeFocus();
+                }
+                else if (U32(event.input().at(0)) == 27 and U32(event.input().at(1)) == 'l')
+                {
+                    bottom_bar.cancel_button->TakeFocus();
+                }
+                else if (U32(event.input().at(0)) == 27 and U32(event.input().at(1)) == 'r')
+                {
+                    bottom_bar.search_text_input->TakeFocus();
+                }
+                else if (U32(event.input().at(0)) == 27 and U32(event.input().at(1)) == 'f')
+                {
+                    file_picker->TakeFocus();
+                }
+            }
+            /* std::vector<U32> bytes = functional::string_to_bytes(event.input()) % functional::bytes_to_uints; */
+            /* log(state, fmt::format(" event caught: {}", tb::meta::to_string(bytes))); */
+        }
         return false;
     });
-    return result;
+
+    return AppComponent {
+        .self = self,
+        .bottom_bar = bottom_bar,
+    };
 }
 
 }

@@ -26,11 +26,6 @@ enum class ReplacementMode
     PYTHON,
 };
 
-struct Foo
-{
-    StringRef bar;
-};
-
 struct ByteSlice
 {
     U64 start;
@@ -74,6 +69,9 @@ struct TopBarState
 
 struct BottomBarState
 {
+    String search_text;
+    String replacement_text;
+    String search_directory;
     String search_button_label;
     String commit_button_label;
     String cancel_button_label;
@@ -128,6 +126,22 @@ struct AppState
     FileViewerState file_viewer_state;
     HistoryViewerState history_viewer_state;
     BottomBarState bottom_bar_state;
+};
+
+
+struct BottomBarComponent
+{
+    ftxui::Component self;
+    ftxui::Component search_button;
+    ftxui::Component commit_button;
+    ftxui::Component cancel_button;
+    ftxui::Component search_text_input;
+};
+
+struct AppComponent
+{
+    ftxui::Component self;
+    BottomBarComponent bottom_bar;
 };
 
 }

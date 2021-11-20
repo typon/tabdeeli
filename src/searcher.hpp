@@ -25,7 +25,7 @@ struct Searcher
 namespace searcher
 {
     Searcher init_searcher();
-    void execute_search(Searcher* searcher, Logger* logger);
+    void execute_search(Searcher* searcher, Logger* logger, StringRef search_text, StringRef search_directory);
 }
 
 }

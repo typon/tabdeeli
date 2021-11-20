@@ -20,17 +20,23 @@ using namespace ftxui;
 namespace {
 class StyledButtonBase : public ComponentBase {
  public:
-  StyledButtonBase(ConstStringRef label,
-             Decorator default_style,
-             std::function<void()> on_click,
-             Ref<ButtonOption> option)
-      : label_(label), default_style_(default_style), on_click_(on_click), option_(std::move(option)) {}
+  StyledButtonBase(
+    ConstStringRef label,
+    Decorator default_style,
+    std::function<Element()> label_text_element_callback,
+    std::function<void()> on_click,
+    Ref<ButtonOption> option) :
+        label_(label),
+        default_style_(default_style),
+        label_text_element_callback_(label_text_element_callback),
+        on_click_(on_click),
+        option_(std::move(option)) {}
 
   // Component implementation:
   Element Render() override {
     Decorator style = Focused() ? inverted : this->default_style_;
     auto my_border = option_->border ? border : nothing;
-    return text(*label_) | my_border | style | reflect(box_);
+    return label_text_element_callback_() | my_border | style | reflect(box_);
   }
 
   bool OnEvent(Event event) override {
@@ -60,6 +66,7 @@ class StyledButtonBase : public ComponentBase {
 
  private:
   ConstStringRef label_;
+  std::function<Element()> label_text_element_callback_;
   std::function<void()> on_click_;
   Decorator default_style_;
   Box box_;
@@ -94,9 +101,10 @@ class StyledButtonBase : public ComponentBase {
 Component StyledButton(
     ConstStringRef label,
     Decorator default_style,
+    std::function<Element()> label_text_element_callback_,
     std::function<void()> on_click,
     Ref<ButtonOption> option) {
-  return Make<StyledButtonBase>(label, default_style, std::move(on_click), std::move(option));
+  return Make<StyledButtonBase>(label, default_style, std::move(label_text_element_callback_), std::move(on_click), std::move(option));
 }
 
 }  // namespace ftxui

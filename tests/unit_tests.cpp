@@ -102,9 +102,10 @@ TEST_CASE("Extract Lines from Byte Slice 2", "[file_manager]" ) {
 
 TEST_CASE("Test json conversion", "[json]" ) {
     String x = "hello";
-    tb::Foo f = {.bar = std::cref(x)};
+    tb::ByteSlice f = {.start = 0, .end = 1};
     REQUIRE(trim(to_string(f)) == trim(R""""(
-Foo {
-    "bar": "hello"
+ByteSlice {
+    "end": 1,
+    "start": 0
 })""""));
 }

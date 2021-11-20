@@ -45,6 +45,26 @@ static auto sorted_keys = [](const auto& map)
         % fn::to_vector();
 };
 
+static auto string_to_bytes = [](const auto& string)
+{
+    return
+        fn::from(string.begin(), string.end())
+        % fn::transform([&](const auto& character) {
+            return U8(character);
+        })
+        % fn::to_vector();
+};
+
+static auto bytes_to_uints = [](const auto& bytes)
+{
+    return
+        fn::from(bytes.begin(), bytes.end())
+        % fn::transform([&](const auto& byte) {
+            return U32(byte);
+        })
+        % fn::to_vector();
+};
+
 inline std::string truncate_string(const std::string& str, U64 max_len)
 {
     U64 len = str.length();
