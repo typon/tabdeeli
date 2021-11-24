@@ -5,6 +5,7 @@
 #include <fmt/core.h>                          // for fmt::format
 
 #include "utils.hpp"
+#include "searcher.hpp"
 #include "metaprogramming.hpp"
 
 using tb::String;
@@ -52,15 +53,15 @@ TEST_CASE("Extract Lines from Byte Slice 0", "[file_manager]" ) {
 
     std::tie(start, end) = tb::get_line_indices_spanning_byte_slice(fm, tb::ByteSlice {.start = 0, .end = 125});
     REQUIRE(start == 0);
-    REQUIRE(end == 6);
+    REQUIRE(end == 5);
 
     std::tie(start, end) = tb::get_line_indices_spanning_byte_slice(fm, tb::ByteSlice {.start = 0, .end = 126});
     REQUIRE(start == 0);
-    REQUIRE(end == 6);
+    REQUIRE(end == 5);
 
     REQUIRE_THROWS(tb::get_line_indices_spanning_byte_slice(fm, tb::ByteSlice {.start = 1, .end = 0}));
 
-    std::tie(start, end) = tb::get_line_indices_spanning_byte_slice(fm, tb::ByteSlice {.start = 150, .end = 150});
+    std::tie(start, end) = tb::get_line_indices_spanning_byte_slice(fm, tb::ByteSlice {.start = 250, .end = 250});
     REQUIRE(start == 6);
     REQUIRE(end == 6);
 }
@@ -108,4 +109,17 @@ ByteSlice {
     "end": 1,
     "start": 0
 })""""));
+}
+
+TEST_CASE("Test search", "[search]" ) {
+    tb::Searcher searcher = tb::searcher::init_searcher();
+    tb::Logger logger = fmt::output_file("test.log");
+    String s = "rew";
+    String d = "/home/typon/gitz";
+    tb::searcher::execute_search(&searcher, &logger, s, d);
+    REQUIRE(searcher.num_results > 0);
+    s = "lew";
+    d = "/home/typon/gitz/tabdeeli";
+    tb::searcher::execute_search(&searcher, &logger, s, d);
+    REQUIRE(searcher.num_results == 5);
 }
