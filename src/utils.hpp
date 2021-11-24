@@ -6,6 +6,7 @@
 
 #include "ftxui/dom/elements.hpp"  // for text, separator, bold, hcenter, vbox, hbox, gauge, Element, operator|, border
 
+#include "components.hpp"
 #include "state.hpp"
 
 namespace fn = rangeless::fn;
@@ -17,11 +18,19 @@ void log(AppState* state, std::string_view msg);
 void log(Logger* logger, std::string_view msg);
 Char** vector_of_strings_to_double_char_array(const std::vector<String>& strings);
 FileManager read_file_into_file_manager(const String& file_name);
+std::vector<U32> get_line_start_byte_indices_for_file(const String& file_contents);
+FileManager replace_text_in_file(const FileManager& file_manager, ByteSlice byte_slice, String replacement_text);
 std::vector<FileLine> get_lines_spanning_byte_slice(const FileManager&, ByteSlice);
+std::vector<FileLine> create_lines_with_replaced_text(const std::vector<FileLine>& prev_lines, const String& replacement_text);
 std::tuple<U32, U32> get_line_indices_spanning_byte_slice(const FileManager&, ByteSlice);
 std::string trim(const std::string &s);
 std::string rtrim(const std::string &s);
 std::string ltrim(const std::string &s);
+std::vector<std::string> split_string(const std::string& s, U32 every_n_chars);
+
+
+
+
 }
 
 namespace tb::functional
@@ -114,7 +123,7 @@ static auto get_from_map_by_value = [](const auto& map, const auto& key)
     }
 };
 
-static auto text_views_from_file_lines = [](const auto& file_lines)
+static auto text_views_from_file_lines = [](const auto& file_lines, const auto& line_color)
 {
     using namespace ftxui;
 
@@ -135,8 +144,8 @@ static auto text_views_from_file_lines = [](const auto& file_lines)
             return hbox({
                 color(Color::GrayLight, text(fmt::format("{:>{}}", file_line.lineno + 1, gutter_width))) | bold | size(WIDTH, EQUAL, gutter_width),
                 color(Color::GrayLight, text("| ")),
-                text(file_line.content) | flex_grow,
-            });
+                color(line_color, hflow(ftxui_extras::flexible_paragraph(file_line.content)))
+            }) | yflex_grow;
         })
         % fn::to_vector();
 };

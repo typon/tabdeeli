@@ -43,7 +43,6 @@ struct FileManager
     StringRef file_name;
     String contents;
     std::vector<U32> line_start_byte_indices;
-    std::vector<ByteSlice> match_byte_slices;
 };
 
 struct Action {
@@ -76,6 +75,8 @@ struct BottomBarState
     String commit_button_label;
     String cancel_button_label;
     ReplacementMode replacement_mode;
+    U32 num_matches_processed;
+    U32 num_matches_found;
 };
 
 struct FilePickerState
@@ -86,6 +87,7 @@ struct FilePickerState
     std::vector<String> file_names_as_displayed;
     std::vector<StringRef> file_names;
     std::map<U32, FileManager> file_managers;
+    std::map<U32, FileManager> replacement_file_managers;
     ftxui::MenuOption menu_options;
 
     U64 min_width;
@@ -100,6 +102,8 @@ struct FileViewerState
     std::vector<FileLine> prev_lines;
     std::vector<FileLine> new_lines;
     String postamble;
+    String accept_button_label;
+    String reject_button_label;
 };
 
 struct HistoryViewerState

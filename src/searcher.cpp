@@ -24,25 +24,24 @@ Searcher init_searcher()
 void execute_search(Searcher* searcher, Logger* logger, StringRef search_text, StringRef search_directory)
 {
     std::vector<String> paths = {search_directory};
-	searcher->results = ag_search(const_cast<char*>(search_text.get().data()), paths.size(), vector_of_strings_to_double_char_array(paths), &searcher->num_results);
+	searcher->results = ag_search_ts(const_cast<char*>(search_text.get().data()), paths.size(), vector_of_strings_to_double_char_array(paths), &searcher->num_results);
 	if (not searcher->results)
     {
 		log(logger, "no results_found");
     }
 	else
     {
-		log(logger, fmt::format("{} results found", searcher->num_results));
-        /* Show them on the screen, if any. */
-        for (size_t i = 0; i < searcher->num_results; i++) {
-            for (size_t j = 0; j < searcher->results[i]->nmatches; j++) {
-                log(logger, fmt::format("file: {}, match: {}, byte_start: {}, byte_end: {}",
-                                searcher->results[i]->file,
-                                searcher->results[i]->matches[j]->match,
-                                searcher->results[i]->matches[j]->byte_start,
-                                searcher->results[i]->matches[j]->byte_end
-                ));
-            }
-        }
+		/* log(logger, fmt::format("{} results found", searcher->num_results)); */
+		/*         for (size_t i = 0; i < searcher->num_results; i++) { */
+		/*             for (size_t j = 0; j < searcher->results[i]->nmatches; j++) { */
+		/*                 log(logger, fmt::format("file: {}, match: {}, byte_start: {}, byte_end: {}", */
+		/*                                 searcher->results[i]->file, */
+		/*                                 searcher->results[i]->matches[j]->match, */
+		/*                                 searcher->results[i]->matches[j]->byte_start, */
+		/*                                 searcher->results[i]->matches[j]->byte_end */
+		/*                 )); */
+		/*             } */
+		/*         } */
     }
 }
 

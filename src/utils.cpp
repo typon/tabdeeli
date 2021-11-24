@@ -2,6 +2,7 @@
 #include <fstream>
 #include <regex>
 #include <fmt/core.h>                          // for fmt::format
+#include <string>
 
 #include "state.hpp"
 #include "metaprogramming.hpp"
@@ -39,16 +40,38 @@ vector_of_strings_to_double_char_array(const std::vector<String>& strings)
     return result;
 }
 
-std::string ltrim(const std::string &s) {
+std::string
+ltrim(const std::string &s) {
     return std::regex_replace(s, std::regex("^\\s+"), std::string(""));
 }
 
-std::string rtrim(const std::string &s) {
+std::string
+rtrim(const std::string &s) {
     return std::regex_replace(s, std::regex("\\s+$"), std::string(""));
 }
 
-std::string trim(const std::string &s) {
+std::string
+trim(const std::string &s) {
     return ltrim(rtrim(s));
+}
+
+std::vector<std::string>
+split_string(const std::string& s, U32 every_n_chars)
+{
+   U32 num_sub_strings = s.length() / every_n_chars;
+
+   std::vector<std::string> result;
+   for (U32 i = 0; i < num_sub_strings; i++)
+   {
+        result.push_back(s.substr(i * every_n_chars, every_n_chars));
+   }
+
+   // If there are leftover characters, create a shorter item at the end.
+   if (s.length() % every_n_chars != 0)
+   {
+        result.push_back(s.substr(every_n_chars * num_sub_strings));
+   }
+   return result;
 }
 
 FileManager
@@ -90,14 +113,39 @@ read_file_into_file_manager(const String& file_name)
         prev_char = curr_char;
     }
 
-    /* std::vector<U8> buffer(size); // create a buffer to read into */
-    /* std::fread(buffer.data(), sizeof(U8), buffer.size(), file_handle); // read into it correct number of bytes */
-
     std::fclose(file_handle);
 
     // TODO: Replace String with a custom string class...
     // This currently causes an extra copy because STL containers must own their own memory.
     /* return String(buffer.begin(), buffer.end()); */
+    return result;
+}
+
+std::vector<U32>
+get_line_start_byte_indices_for_file(const String& file_contents)
+{
+    U32 byte_index = 0;
+    Char prev_char = '\n';
+
+    std::vector<U32> result;
+    while (true)
+    {
+        if (byte_index == file_contents.length())
+        {
+            break;
+        }
+
+        Char curr_char = file_contents.at(byte_index);
+
+        if (prev_char == '\n')
+        {
+            result.push_back(byte_index);
+        }
+
+        byte_index++;
+        prev_char = curr_char;
+    }
+
     return result;
 }
 
@@ -169,6 +217,19 @@ get_lines_spanning_byte_slice(const FileManager& file_manager, ByteSlice byte_sl
         U64 num_bytes = end_byte - start_byte;
         result.push_back(FileLine{.content = file_manager.contents.substr(start_byte, num_bytes), .lineno = lineno });
     }
+    return result;
+}
+
+FileManager
+replace_text_in_file(const FileManager& file_manager, ByteSlice byte_slice, String replacement_text)
+{
+    FileManager result = file_manager;
+
+    U32 size = byte_slice.end - byte_slice.start + 1;
+    result.contents.replace(byte_slice.start, size, replacement_text);
+
+    result.line_start_byte_indices = get_line_start_byte_indices_for_file(result.contents);
+
     return result;
 }
 

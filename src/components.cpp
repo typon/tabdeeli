@@ -15,6 +15,34 @@ using ftxui_extras::StyledButton;
 namespace tb
 {
 
+void reset_state_before_search(AppState* app_state)
+{
+
+    Searcher* searcher = &app_state->searcher;
+    if (searcher->results != nullptr)
+    {
+        log(app_state, "Cleaning up ag resources");
+        ag_free_all_results(searcher->results, searcher->num_results);
+        searcher->num_results = 0;
+        ag_finish();
+        *searcher = searcher::init_searcher();
+    }
+
+    FilePickerState* file_picker = &app_state->file_picker_state;
+    file_picker->file_to_matches.clear();
+    file_picker->file_to_currently_selected_match.clear();
+    file_picker->file_names.clear();
+    file_picker->file_managers.clear();
+    file_picker->file_names_as_displayed.clear();
+
+    FileViewerState* file_viewer = &app_state->file_viewer_state;
+    file_viewer->prev_lines.clear();
+    file_viewer->new_lines.clear();
+    file_viewer->preamble.clear();
+    file_viewer->postamble.clear();
+    file_viewer->current_diff_index = 0;
+}
+
 void
 populate_file_viewer_state(AppState* app_state)
 {
@@ -43,7 +71,6 @@ populate_file_viewer_state(AppState* app_state)
         file_picker->file_managers.insert({selected_file_index, file_manager_opt.value()});
     }
 
-    log(app_state, fmt::format("match: {}->{}", match.byte_start, match.byte_end));
     std::string x = file_manager_opt.value().contents;
     if (std::string(file_manager_opt.value().file_name) == "/home/typon/gitz/tabdeeli/src/object_utils.cpp")
     {
@@ -52,13 +79,19 @@ populate_file_viewer_state(AppState* app_state)
     else {
     x = x.substr(0, 40);
     }
-    /* std::string x = "hell"; */
     assert(x.size() > 0);
-    log(app_state, x);
+
+    log(app_state, "populating file viewer state");
     file_viewer->prev_lines = get_lines_spanning_byte_slice(file_manager_opt.value(), byte_slice_from_match(match));
 
-    log(app_state, fmt::format("num_lines: {}", file_viewer->prev_lines.size()));
+    FileManager replacement_file_manager = replace_text_in_file(file_manager_opt.value(), byte_slice_from_match(match), app_state->bottom_bar_state.replacement_text);
 
+    auto replacement_slice = ByteSlice {.start = match.byte_start, .end = match.byte_start + app_state->bottom_bar_state.replacement_text.length()};
+    log(app_state, "replaced file: ");
+    log(app_state, replacement_file_manager.contents);
+    log(app_state, meta::to_string(replacement_slice));
+    file_viewer->new_lines = get_lines_spanning_byte_slice(replacement_file_manager, replacement_slice);
+    file_picker->replacement_file_managers.insert({selected_file_index, replacement_file_manager});
 }
 
 void
@@ -67,6 +100,8 @@ populate_file_picker_state(AppState* app_state)
     FilePickerState* file_picker = &app_state->file_picker_state;
     Searcher* searcher = &app_state->searcher;
 
+    U32 num_matches_found = 0;
+
     for (U64 i = 0; i < searcher->num_results; i++)
     {
         std::vector<ag_result::ag_match> matches;
@@ -74,16 +109,13 @@ populate_file_picker_state(AppState* app_state)
         {
             ag_result::ag_match match = *searcher->results[i]->matches[j];
             matches.push_back(match);
+            num_matches_found++;
         }
         file_picker->file_to_matches[String(searcher->results[i]->file)] = matches;
     }
 
-    // std::vector<std::reference_wrapper<const String>> file_names;
-    // for (const auto&[fname, _] : file_picker->file_to_matches)
-    // {
-    //     file_names.push_back(std::cref(fname));
-    // }
-    // file_picker->file_names = file_names;
+    app_state->bottom_bar_state.num_matches_found = num_matches_found;
+
     U32 num_files = file_picker->file_to_matches.size();
     file_picker->file_names = functional::keys(file_picker->file_to_matches) % fn::to_vector();
     file_picker->file_to_currently_selected_match.assign(num_files, 0);
@@ -92,16 +124,12 @@ populate_file_picker_state(AppState* app_state)
     app_state->actions_queue.push_back(Action {ActionType::FocusFilePicker});
     app_state->screen->PostEvent(Event::Custom);
 
-    /* for (const auto& [filename, results]: file_to_results) */
-    /* { */
-    /*     .push_back(filename); */
-    /* } */
 }
 
 Component
-Window(String title, Component component) {
+Window(Element title, Component component) {
   return Renderer(component, [component, title] {  //
-    return window(text(title), component->Render()) | flex;
+    return window(title, component->Render()) | flex;
   });
 }
 
@@ -143,6 +171,9 @@ BottomBar(AppState* app_state, ScreenInteractive* screen, BottomBarState* state)
             return hbox({underlined(color(Color::DarkBlue, text("S"))), text("earch")});
         },
         [app_state, state] () {
+            log(app_state, "pre, presetting state");
+            reset_state_before_search(app_state);
+            log(app_state, "pre, executing search");
             searcher::execute_search(&app_state->searcher, &app_state->logger, state->search_text, state->search_directory);
             log(app_state, "pre, populating picker state");
             populate_file_picker_state(app_state);
@@ -183,7 +214,14 @@ BottomBar(AppState* app_state, ScreenInteractive* screen, BottomBarState* state)
         cancel_button,
     });
 
+    F32 percent_matches_processed = 0;
+    if (state->num_matches_found > 0)
+    {
+        percent_matches_processed = state->num_matches_processed / float(state->num_matches_found);
+    }
+
     auto self = Renderer(layout, [
+            percent_matches_processed,
             state,
             search_text_input,
             replacement_text_input,
@@ -191,6 +229,7 @@ BottomBar(AppState* app_state, ScreenInteractive* screen, BottomBarState* state)
             search_button,
             commit_button,
             cancel_button] () {
+
         auto mode_label = bold(text("Mode: " + replacement_mode_serialize(state->replacement_mode)));
 
         return hbox({
@@ -199,6 +238,8 @@ BottomBar(AppState* app_state, ScreenInteractive* screen, BottomBarState* state)
                 hbox({text("Replacement string: "), replacement_text_input->Render()}),
                 hbox({text("Search directory: "), search_directory_input->Render()}),
             })| flex,
+            separator(),
+            window(text(fmt::format("Matches processed [{}/{}]", state->num_matches_processed, state->num_matches_found)), gauge(percent_matches_processed)) | size(WIDTH, GREATER_THAN, 15),
             separator(),
             search_button->Render(),
             commit_button->Render(),
@@ -223,25 +264,86 @@ FilePicker(ScreenInteractive* screen, FilePickerState* state)
     state->menu_options.style_focused = bgcolor(Color::Red);
     state->menu_options.style_selected_focused = bgcolor(Color::Red);
     state->menu_options.on_enter = screen->ExitLoopClosure();
-    auto result = Window("Files", Menu(&state->file_names_as_displayed, &state->selected_file_index, &state->menu_options));
+
+
+    /* auto file_picker_menu = Window(hbox({underlined(color(Color::GrayLight, text("F"))), text("iles")}) , Menu(&state->file_names_as_displayed, &state->selected_file_index, &state->menu_options)); */
+    auto file_picker_menu = Menu(&state->file_names_as_displayed, &state->selected_file_index, &state->menu_options);
+
+    auto result = Renderer(file_picker_menu, [file_picker_menu] () {
+        return
+            window(
+                hbox({underlined(color(Color::GrayLight, text("F"))), text("iles")}),
+                file_picker_menu->Render() | vscroll_indicator | frame
+            );
+    });
+
+
     return result;
 }
 
 Component
 FileViewer(AppState* app_state, FileViewerState* state)
 {
-    return Renderer([app_state, state] () {
+    auto accept_button = StyledButton(&state->accept_button_label, bgcolor(Color::Green),
+        [] () {
+            return hbox({bold(color(Color::DarkGreen, text("A"))), text("ccept")});
+        },
+        [app_state] () {
+            log(app_state, "pre, accepted");
+        }
+    );
+
+    auto reject_button = StyledButton(&state->reject_button_label, bgcolor(Color::RedLight),
+        [] () {
+            return hbox({bold(color(Color::DarkRed, text("R"))), text("eject")});
+        },
+        [app_state] () {
+            log(app_state, "pre, canceled");
+        }
+    );
+
+    auto layout = Container::Horizontal({
+        accept_button,
+        reject_button,
+    });
+
+    return Renderer(layout, [app_state, state, accept_button, reject_button] () {
         populate_file_viewer_state(app_state);
 
-        auto prev_lines_view = vbox(functional::text_views_from_file_lines(state->prev_lines));
-        auto new_lines_view = vbox(functional::text_views_from_file_lines(state->new_lines));
+        auto prev_lines_view = vbox(functional::text_views_from_file_lines(state->prev_lines, Color::Red));
+        /* auto new_lines_view = vbox(functional::text_views_from_file_lines(state->new_lines)); */
+        auto new_lines_view = vbox(functional::text_views_from_file_lines(state->new_lines, Color::SeaGreen1));
+
+        bool draw_buttons = state->prev_lines.size() > 0;
+
+        Element match_choice_menu;
+        if (draw_buttons)
+        {
+            match_choice_menu =
+                hbox({
+                    filler(),
+                    accept_button->Render(),
+                    reject_button->Render(),
+                    filler(),
+                });
+        }
+        else
+        {
+            match_choice_menu =
+                hbox({
+                    filler(),
+                });
+        }
 
         return window(text(state->file_name),
                         vbox({
-                            hflow(paragraph(state->preamble)),
-                            prev_lines_view,
-                            new_lines_view,
-                            hflow(paragraph(state->postamble)),
+                            /* hflow(paragraph(state->preamble)), */
+                            /* filler(), */
+                            prev_lines_view | yflex_grow,
+                            new_lines_view | yflex_grow,
+                            /* filler(), */
+                            /* hflow(paragraph(state->postamble)), */
+                            match_choice_menu,
                         })
         );
     });
@@ -255,7 +357,7 @@ HistoryViewer(ScreenInteractive* screen, HistoryViewerState* state)
     state->menu_options.style_focused = bgcolor(Color::Red);
     state->menu_options.style_selected_focused = bgcolor(Color::Red);
     state->menu_options.on_enter = screen->ExitLoopClosure();
-    auto result = Window("History", Menu(&state->diffs_as_displayed, &state->selected_diff, &state->menu_options));
+    auto result = Window(text("History"), Menu(&state->diffs_as_displayed, &state->selected_diff, &state->menu_options));
     return result;
 }
 

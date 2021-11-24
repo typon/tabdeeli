@@ -17,7 +17,7 @@ using Logger = fmt::v8::ostream;
 struct Searcher
 {
     U64 num_results;
-    ag_result** results;
+    ag_result** results = nullptr;
     ag_config config;
 };
 

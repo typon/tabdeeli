@@ -23,7 +23,6 @@ RTTR_REGISTRATION
                  .property("file_name", &FileManager::file_name)
                  .property("contents", &FileManager::contents)
                  .property("line_start_byte_indices", &FileManager::line_start_byte_indices)
-                 .property("match_byte_slices", &FileManager::match_byte_slices)
     ;
 /*     registration::class_<TensorId>("TensorId") */
 /*                  .property("id", &TensorId::id) */
