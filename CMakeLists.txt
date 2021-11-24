@@ -76,12 +76,14 @@ add_executable(tabdeeli
     src/styled_button.cpp
     src/serde.cpp
     src/metaprogramming.cpp
+    src/flexible_paragraph.cpp
 )
 
 add_executable(tabdeeli_unit_tests
     tests/unit_tests.cpp
     src/utils.cpp
     src/metaprogramming.cpp
+    src/searcher.cpp
 )
 
 target_include_directories(tabdeeli PRIVATE src)
