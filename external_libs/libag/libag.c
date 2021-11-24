@@ -296,6 +296,12 @@ static int setup_search(void)
 		find_skip_lookup = NULL;
 		generate_find_skip(opts.query, opts.query_len, &find_skip_lookup,
 			opts.casing == CASE_SENSITIVE);
+
+
+        for (size_t i = 0; i < sizeof(h_table)/sizeof(h_table[0]); i++) {
+            h_table[i] = 0;
+        }
+
 		generate_hash(opts.query, opts.query_len, h_table,
 			opts.casing == CASE_SENSITIVE);
     }
