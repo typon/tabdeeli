@@ -27,5 +27,6 @@ ftxui::Component StyledButton(
     std::function<void()> on_click,
     ftxui::Ref<ftxui::ButtonOption> = {});
 
-ftxui::Elements flexible_paragraph(std::string longstring);
+ftxui::Component FlexibleMenu(tb::StringPairsConstRef entries, int* selected, ftxui::Ref<ftxui::MenuOption> option);
+ftxui::Elements flexible_paragraph(std::string longstring, tb::U32 max_line_width);
 } // end namespace ftxui_extras

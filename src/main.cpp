@@ -73,8 +73,8 @@ int main(int argc, char* argv[]) {
             .selected_diff = 0,
             .diffs = {},
             .diffs_as_displayed = {},
-            .min_width = 20,
-            .max_width = 30,
+            .min_width = 30,
+            .max_width = 40,
         },
         .bottom_bar_state = BottomBarState {
             .search_text = search_text,

@@ -12,17 +12,17 @@ namespace ftxui_extras {
 using namespace ftxui;
 
 Elements
-flexible_paragraph(std::string longstring)
+flexible_paragraph(std::string longstring, U32 max_line_width)
 {
 
     auto initial_paragraph = paragraph(longstring);
-    if (initial_paragraph.size() > 5)
+    if (initial_paragraph.size() > 20)
     {
         // we have 5 individual text elements aka words in this paragraph, its probably good enough
         return initial_paragraph;
     }
     // We want to split into 40 chars
-    U32 every_n_chars = 40;
+    U32 every_n_chars = max_line_width;
 
     Elements result;
     for (const std::string& substr: tb::split_string(longstring, every_n_chars))

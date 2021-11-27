@@ -77,6 +77,7 @@ add_executable(tabdeeli
     src/serde.cpp
     src/metaprogramming.cpp
     src/flexible_paragraph.cpp
+    src/flexible_menu.cpp
 )
 
 add_executable(tabdeeli_unit_tests

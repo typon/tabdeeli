@@ -54,8 +54,7 @@ struct Action {
 
 struct TextDiff
 {
-    U32 start_byte;
-    U32 end_byte;
+    ByteSlice byte_slice;
     String file_name;
     String replacement_text;
 };
@@ -110,7 +109,7 @@ struct HistoryViewerState
 {
     S32 selected_diff;
     std::vector<TextDiff> diffs;
-    std::vector<String> diffs_as_displayed;
+    std::vector<std::tuple<String, String>> diffs_as_displayed;
     ftxui::MenuOption menu_options;
 
     U64 min_width;

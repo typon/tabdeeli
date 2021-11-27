@@ -41,6 +41,66 @@ void reset_state_before_search(AppState* app_state)
     file_viewer->preamble.clear();
     file_viewer->postamble.clear();
     file_viewer->current_diff_index = 0;
+
+    BottomBarState* bottom_bar = &app_state->bottom_bar_state;
+    bottom_bar->num_matches_found = 0;
+    bottom_bar->num_matches_processed = 0;
+
+    HistoryViewerState* history = &app_state->history_viewer_state;
+    history->diffs.clear();
+    history->diffs_as_displayed.clear();
+    history->selected_diff = 0;
+}
+
+void add_diff_to_history(HistoryViewerState* history, const TextDiff& diff)
+{
+    history->diffs.push_back(diff);
+    history->diffs_as_displayed.push_back(diff_display_item_from_diff(diff));
+}
+
+ag_result::ag_match get_current_match(FilePickerState* file_picker)
+{
+    U32 current_match_index = file_picker->file_to_currently_selected_match.at(file_picker->selected_file_index);
+    StringRef file_name = file_picker->file_names.at(file_picker->selected_file_index);
+    return file_picker->file_to_matches.at(file_name).at(current_match_index);
+}
+
+void accept_current_change(AppState* app_state)
+{
+    log(app_state, "Accepting change");
+
+    FilePickerState* file_picker = &app_state->file_picker_state;
+    S32 selected_file_index = file_picker->selected_file_index;
+    StringRef file_name = file_picker->file_names.at(file_picker->selected_file_index);
+    U32* current_match_index = &(file_picker->file_to_currently_selected_match.at(file_picker->selected_file_index));
+
+    if (file_picker->file_names.size() <= file_picker->selected_file_index)
+    {
+        return;
+    }
+    else if (*current_match_index >= (file_picker->file_to_matches.at(file_name).size()))
+    {
+        return;
+    }
+
+    ag_result::ag_match current_match = get_current_match(file_picker);
+
+
+    TextDiff diff = make_text_diff(current_match, file_name, app_state->bottom_bar_state.replacement_text);
+
+    HistoryViewerState* history = &app_state->history_viewer_state;
+    add_diff_to_history(history, diff);
+
+
+    *current_match_index = *current_match_index + 1;
+    // Update the global match process gauge
+    app_state->bottom_bar_state.num_matches_processed++;
+
+}
+
+void reject_current_change(AppState* app_state)
+{
+    log(app_state, "Accepting change");
 }
 
 void
@@ -62,6 +122,12 @@ populate_file_viewer_state(AppState* app_state)
 
     StringRef file_name = file_picker->file_names.at(selected_file_index);
     U32 match_index = file_picker->file_to_currently_selected_match.at(selected_file_index);
+
+    if (match_index >= file_picker->file_to_matches.at(file_name).size())
+    {
+        return;
+    }
+
     ag_result::ag_match match = file_picker->file_to_matches.at(file_name).at(match_index);
 
     std::optional<FileManager> file_manager_opt = functional::get_from_map_by_value(file_picker->file_managers, selected_file_index);
@@ -87,9 +153,6 @@ populate_file_viewer_state(AppState* app_state)
     FileManager replacement_file_manager = replace_text_in_file(file_manager_opt.value(), byte_slice_from_match(match), app_state->bottom_bar_state.replacement_text);
 
     auto replacement_slice = ByteSlice {.start = match.byte_start, .end = match.byte_start + app_state->bottom_bar_state.replacement_text.length()};
-    log(app_state, "replaced file: ");
-    log(app_state, replacement_file_manager.contents);
-    log(app_state, meta::to_string(replacement_slice));
     file_viewer->new_lines = get_lines_spanning_byte_slice(replacement_file_manager, replacement_slice);
     file_picker->replacement_file_managers.insert({selected_file_index, replacement_file_manager});
 }
@@ -214,14 +277,7 @@ BottomBar(AppState* app_state, ScreenInteractive* screen, BottomBarState* state)
         cancel_button,
     });
 
-    F32 percent_matches_processed = 0;
-    if (state->num_matches_found > 0)
-    {
-        percent_matches_processed = state->num_matches_processed / float(state->num_matches_found);
-    }
-
     auto self = Renderer(layout, [
-            percent_matches_processed,
             state,
             search_text_input,
             replacement_text_input,
@@ -231,6 +287,11 @@ BottomBar(AppState* app_state, ScreenInteractive* screen, BottomBarState* state)
             cancel_button] () {
 
         auto mode_label = bold(text("Mode: " + replacement_mode_serialize(state->replacement_mode)));
+        F32 percent_matches_processed = 0;
+        if (state->num_matches_found > 0)
+        {
+            percent_matches_processed = state->num_matches_processed / F32(state->num_matches_found);
+        }
 
         return hbox({
             vbox({
@@ -239,7 +300,7 @@ BottomBar(AppState* app_state, ScreenInteractive* screen, BottomBarState* state)
                 hbox({text("Search directory: "), search_directory_input->Render()}),
             })| flex,
             separator(),
-            window(text(fmt::format("Matches processed [{}/{}]", state->num_matches_processed, state->num_matches_found)), gauge(percent_matches_processed)) | size(WIDTH, GREATER_THAN, 15),
+            window(text(fmt::format("All matches processed [{}/{}]", state->num_matches_processed, state->num_matches_found)), gauge(percent_matches_processed)) | size(WIDTH, GREATER_THAN, 15),
             separator(),
             search_button->Render(),
             commit_button->Render(),
@@ -310,9 +371,17 @@ FileViewer(AppState* app_state, FileViewerState* state)
     return Renderer(layout, [app_state, state, accept_button, reject_button] () {
         populate_file_viewer_state(app_state);
 
-        auto prev_lines_view = vbox(functional::text_views_from_file_lines(state->prev_lines, Color::Red));
-        /* auto new_lines_view = vbox(functional::text_views_from_file_lines(state->new_lines)); */
-        auto new_lines_view = vbox(functional::text_views_from_file_lines(state->new_lines, Color::SeaGreen1));
+        U32 num_matches_processed = get_num_matches_for_curr_file(&app_state->file_picker_state);
+        U32 curr_match = get_curr_match_for_curr_file(&app_state->file_picker_state);
+
+        F32 percent_matches_processed = 0;
+        if (num_matches_processed > 0)
+        {
+            percent_matches_processed = curr_match / F32(num_matches_processed);
+        }
+
+        auto prev_lines_view = vbox(functional::text_views_from_file_lines(state->prev_lines, Color::Red, " -"));
+        auto new_lines_view = vbox(functional::text_views_from_file_lines(state->new_lines, Color::SeaGreen1, " +"));
 
         bool draw_buttons = state->prev_lines.size() > 0;
 
@@ -325,6 +394,7 @@ FileViewer(AppState* app_state, FileViewerState* state)
                     accept_button->Render(),
                     reject_button->Render(),
                     filler(),
+                    window(text(fmt::format("File matches processed [{}/{}]", curr_match, num_matches_processed)), gauge(percent_matches_processed)) | size(WIDTH, GREATER_THAN, 15),
                 });
         }
         else
@@ -338,14 +408,26 @@ FileViewer(AppState* app_state, FileViewerState* state)
         return window(text(state->file_name),
                         vbox({
                             /* hflow(paragraph(state->preamble)), */
-                            /* filler(), */
+                            filler(),
                             prev_lines_view | yflex_grow,
                             new_lines_view | yflex_grow,
-                            /* filler(), */
+                            filler(),
                             /* hflow(paragraph(state->postamble)), */
                             match_choice_menu,
                         })
         );
+    });
+}
+
+Component
+DiffItem(const TextDiff& diff)
+{
+    return Renderer([&] () {
+        return
+        vbox({
+            text(functional::truncate_string(diff.file_name, 10)),
+            text(fmt::format("[{}, {}]", diff.byte_slice.start, diff.byte_slice.end))
+        });
     });
 }
 
@@ -357,8 +439,14 @@ HistoryViewer(ScreenInteractive* screen, HistoryViewerState* state)
     state->menu_options.style_focused = bgcolor(Color::Red);
     state->menu_options.style_selected_focused = bgcolor(Color::Red);
     state->menu_options.on_enter = screen->ExitLoopClosure();
-    auto result = Window(text("History"), Menu(&state->diffs_as_displayed, &state->selected_diff, &state->menu_options));
-    return result;
+    auto history_list = ftxui_extras::FlexibleMenu(&state->diffs_as_displayed, &state->selected_diff, &state->menu_options);
+
+    return Renderer(history_list, [state, history_list] {
+        return window(
+            hbox({underlined(color(Color::GrayLight, text("H"))), text("istory")}),
+            history_list->Render() | vscroll_indicator | frame
+        );
+    });
 }
 
 AppComponent
@@ -392,18 +480,21 @@ App(AppState* state)
             bottom_bar.self->Render(),
         }) | border;
     });
-    self = CatchEvent(self, [state, file_picker, bottom_bar] (Event event) {
+    self = CatchEvent(self, [state, file_picker, history_viewer, bottom_bar] (Event event) {
         if (event.is_character()) {
             String character = event.character();
-            log(state, "char event caught: " + character + "\n");
-            if (character == "f")
+            if (character == "a")
             {
-                log(state, "focusing file picker");
+                accept_current_change(state);
+            }
+            else if (character == "r")
+            {
+                reject_current_change(state);
             }
         }
         else if (event == Event::Custom)
         {
-            log(state, "custom event");
+            log(state, "custom event, focusing file picker");
             Action action = state->actions_queue.front();
             state->actions_queue.pop_front();
             switch (action.type)
@@ -437,6 +528,10 @@ App(AppState* state)
                 else if (U32(event.input().at(0)) == 27 and U32(event.input().at(1)) == 'f')
                 {
                     file_picker->TakeFocus();
+                }
+                else if (U32(event.input().at(0)) == 27 and U32(event.input().at(1)) == 'h')
+                {
+                    history_viewer->TakeFocus();
                 }
             }
             /* std::vector<U32> bytes = functional::string_to_bytes(event.input()) % functional::bytes_to_uints; */

@@ -27,10 +27,6 @@ std::string trim(const std::string &s);
 std::string rtrim(const std::string &s);
 std::string ltrim(const std::string &s);
 std::vector<std::string> split_string(const std::string& s, U32 every_n_chars);
-
-
-
-
 }
 
 namespace tb::functional
@@ -123,16 +119,12 @@ static auto get_from_map_by_value = [](const auto& map, const auto& key)
     }
 };
 
-static auto text_views_from_file_lines = [](const auto& file_lines, const auto& line_color)
+static auto text_views_from_file_lines = [](const auto& file_lines, const auto& line_color, const auto& line_prefix)
 {
     using namespace ftxui;
 
-    /* U32 max_lineno = 0; */
-    /* for (const FileLine& file_line: file_lines) */
-    /* { */
-    /*     max_lineno = std::max(max_lineno, file_line.lineno); */
-    /* } */
-    /* U32 max_num_digits_in_lineno = 0; do { max_lineno /= 10; max_num_digits_in_lineno++; } while (max_lineno != 0); */
+    auto terminal_x_size = Terminal::Size().dimx;
+    U32 max_flexible_paragraph_line_width = U32(terminal_x_size / 2.5);
 
     return
         fn::refs(file_lines)
@@ -142,9 +134,10 @@ static auto text_views_from_file_lines = [](const auto& file_lines, const auto& 
             S32 gutter_width = std::max(num_digits_in_lineno, 4);
 
             return hbox({
+                color(line_color, text(line_prefix)),
                 color(Color::GrayLight, text(fmt::format("{:>{}}", file_line.lineno + 1, gutter_width))) | bold | size(WIDTH, EQUAL, gutter_width),
                 color(Color::GrayLight, text("| ")),
-                color(line_color, hflow(ftxui_extras::flexible_paragraph(file_line.content)))
+                color(line_color, hflow(ftxui_extras::flexible_paragraph(file_line.content, max_flexible_paragraph_line_width)))
             }) | yflex_grow;
         })
         % fn::to_vector();
