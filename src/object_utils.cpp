@@ -25,22 +25,29 @@ diff_display_item_from_diff(const TextDiff& diff, U32 view_width)
     };
 }
 
-U32 get_num_matches_for_curr_file(FilePickerState* file_picker)
+StringRef curr_file_name(FilePickerState* file_picker)
 {
-    if (file_picker->file_names.size() == 0)
-    {
-        return 0;
-    }
-    return file_picker->file_to_matches.at(file_picker->file_names.at(file_picker->selected_file_index)).size();
+    return file_picker->file_names.at(file_picker->selected_file_index);
 }
 
-U32 get_curr_match_for_curr_file(FilePickerState* file_picker)
+U32 get_num_matches_found_for_curr_file(FilePickerState* file_picker)
 {
     if (file_picker->file_names.size() == 0)
     {
         return 0;
     }
-    return file_picker->file_to_currently_selected_match.at(file_picker->selected_file_index);
+    return file_picker->file_to_num_matches_found.at(file_picker->selected_file_index);
+}
+
+U32 get_num_matches_processed_for_curr_file(FilePickerState* file_picker)
+{
+    if (file_picker->file_names.size() == 0)
+    {
+        return 0;
+    }
+    auto remaining = file_picker->file_to_matches.at(curr_file_name(file_picker)).size();
+    auto found = get_num_matches_found_for_curr_file(file_picker);
+    return found - remaining;
 }
 
 void update_view_widths(AppState* state)
@@ -55,6 +62,32 @@ void update_view_widths(AppState* state)
     state->file_picker_state.current_width = widths.at(0);
     state->file_viewer_state.current_width = widths.at(1);
     state->history_viewer_state.current_width = widths.at(2);
+}
+
+B32 all_matches_processed_for_file(FilePickerState* file_picker, StringRef file_name)
+{
+    return file_picker->file_to_matches.at(file_name).size() == 0;
+}
+
+B32 all_matches_processed_for_current_file(FilePickerState* file_picker)
+{
+    if (not files_have_been_loaded(file_picker))
+    {
+        return true;
+    }
+    return file_picker->file_to_matches.at(curr_file_name(file_picker)).size() == 0;
+}
+
+B32 files_have_been_loaded(FilePickerState* file_picker)
+{
+    if (file_picker->file_to_matches.size() == 0)
+    {
+        return false;
+    }
+    else
+    {
+        return true;
+    }
 }
 
 } // end namespace tb

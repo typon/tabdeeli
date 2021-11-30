@@ -56,7 +56,6 @@ int main(int argc, char* argv[]) {
         .file_picker_state = FilePickerState {
             .selected_file_index = 0,
             .file_to_matches = {},
-            .file_to_currently_selected_match = {},
             .file_names_as_displayed = {},
             .file_names = {},
             .min_width = 40,
@@ -65,6 +64,7 @@ int main(int argc, char* argv[]) {
             .current_width = 0,
         },
         .file_viewer_state = FileViewerState {
+            .mode = FileViewerMode::FILE_MATCH_VIEWER,
             .file_name = NO_FILE_LOADED,
             .preamble = "",
             .prev_lines = {},

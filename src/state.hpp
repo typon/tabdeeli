@@ -17,7 +17,14 @@ const static String NO_FILE_LOADED = "No file loaded";
 
 enum class ActionType
 {
-    FocusFilePicker
+    FocusFilePicker,
+    NoOp,
+};
+
+enum class FileViewerMode
+{
+    FILE_MATCH_VIEWER,
+    HISTORY_DIFF_VIEWER,
 };
 
 enum class ReplacementMode
@@ -58,6 +65,7 @@ struct TextDiff
     B32 accepted;
     ByteSlice byte_slice;
     String file_name;
+    S32 file_index;
     String replacement_text;
     U64 start_line_no;
     U64 start_column;
@@ -85,8 +93,8 @@ struct BottomBarState
 struct FilePickerState
 {
     S32 selected_file_index;
-    std::map<String, std::vector<ag_result::ag_match>> file_to_matches;
-    std::vector<U32> file_to_currently_selected_match;
+    std::map<String, std::deque<ag_result::ag_match>> file_to_matches;
+    std::vector<U64> file_to_num_matches_found;
     std::vector<String> file_names_as_displayed;
     std::vector<StringRef> file_names;
     std::map<U32, FileManager> file_managers;
@@ -101,14 +109,12 @@ struct FilePickerState
 
 struct FileViewerState
 {
+    FileViewerMode mode;
     StringRef file_name;
-    U32 current_diff_index;
     String preamble;
     std::vector<FileLine> prev_lines;
     std::vector<FileLine> new_lines;
     String postamble;
-    String accept_button_label;
-    String reject_button_label;
 
     F32 width_ratio;
     U32 current_width;

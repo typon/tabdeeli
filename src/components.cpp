@@ -30,7 +30,6 @@ void reset_state_before_search(AppState* app_state)
 
     FilePickerState* file_picker = &app_state->file_picker_state;
     file_picker->file_to_matches.clear();
-    file_picker->file_to_currently_selected_match.clear();
     file_picker->file_names.clear();
     file_picker->file_managers.clear();
     file_picker->file_names_as_displayed.clear();
@@ -40,7 +39,6 @@ void reset_state_before_search(AppState* app_state)
     file_viewer->new_lines.clear();
     file_viewer->preamble.clear();
     file_viewer->postamble.clear();
-    file_viewer->current_diff_index = 0;
 
     BottomBarState* bottom_bar = &app_state->bottom_bar_state;
     bottom_bar->num_matches_found = 0;
@@ -52,6 +50,19 @@ void reset_state_before_search(AppState* app_state)
     history->selected_diff = 0;
 }
 
+void
+set_current_file_from_selected_diff(AppState* app_state)
+{
+    HistoryViewerState* history_state = &app_state->history_viewer_state;
+    S32 file_index = history_state->diffs.at(history_state->selected_diff).file_index;
+
+    FilePickerState* file_picker = &app_state->file_picker_state;
+    file_picker->selected_file_index = file_index;
+
+    app_state->actions_queue.push_back(Action {ActionType::NoOp});
+    app_state->screen->PostEvent(Event::Custom);
+}
+
 void add_diff_to_history(AppState* state, HistoryViewerState* history, const TextDiff& diff)
 {
     update_view_widths(state);
@@ -59,17 +70,34 @@ void add_diff_to_history(AppState* state, HistoryViewerState* history, const Tex
     history->diffs_as_displayed.push_back(diff_display_item_from_diff(diff, history->current_width - 4));
 }
 
-ag_result::ag_match get_current_match(FilePickerState* file_picker)
+ag_result::ag_match pop_current_match(FilePickerState* file_picker)
 {
-    U32 current_match_index = file_picker->file_to_currently_selected_match.at(file_picker->selected_file_index);
     StringRef file_name = file_picker->file_names.at(file_picker->selected_file_index);
-    return file_picker->file_to_matches.at(file_name).at(current_match_index);
+    auto result = file_picker->file_to_matches.at(file_name).front();
+    file_picker->file_to_matches.at(file_name).pop_front();
+    return result;
+}
+
+ByteSlice get_current_match_byte_slice(AppState* app_state, FileViewerMode mode)
+{
+    if (mode == FileViewerMode::FILE_MATCH_VIEWER)
+    {
+        FilePickerState* file_picker = &app_state->file_picker_state;
+        StringRef file_name = file_picker->file_names.at(file_picker->selected_file_index);
+        return byte_slice_from_match(file_picker->file_to_matches.at(file_name).front());
+    }
+    else
+    {
+        HistoryViewerState* history_state = &app_state->history_viewer_state;
+        TextDiff diff = history_state->diffs.at(history_state->selected_diff);
+        return diff.byte_slice;
+    }
 }
 
 void accept_current_change(AppState* app_state)
 {
     FilePickerState* file_picker = &app_state->file_picker_state;
-    if (file_picker->file_names.size() == 0)
+    if (not files_have_been_loaded(file_picker))
     {
         return;
     }
@@ -78,24 +106,24 @@ void accept_current_change(AppState* app_state)
 
     FileViewerState* file_viewer = &app_state->file_viewer_state;
     S32 selected_file_index = file_picker->selected_file_index;
-    StringRef file_name = file_picker->file_names.at(file_picker->selected_file_index);
-    U32* current_match_index = &(file_picker->file_to_currently_selected_match.at(file_picker->selected_file_index));
+    StringRef file_name = file_picker->file_names.at(selected_file_index);
 
-    if (file_picker->file_names.size() <= file_picker->selected_file_index)
+    if (file_picker->file_names.size() <= selected_file_index)
     {
         return;
     }
-    else if (*current_match_index >= (file_picker->file_to_matches.at(file_name).size()))
+    else if (all_matches_processed_for_current_file(file_picker))
     {
         return;
     }
 
-    ag_result::ag_match current_match = get_current_match(file_picker);
+    ag_result::ag_match current_match = pop_current_match(file_picker);
 
     auto diff = TextDiff {
         .accepted = true,
         .byte_slice = {.start = current_match.byte_start, .end = current_match.byte_end},
         .file_name = file_name,
+        .file_index = selected_file_index,
         .replacement_text = app_state->bottom_bar_state.replacement_text,
         .start_line_no = file_viewer->prev_lines.at(0).lineno,
         .start_column = file_viewer->prev_lines.at(0).start_column,
@@ -104,15 +132,33 @@ void accept_current_change(AppState* app_state)
     HistoryViewerState* history = &app_state->history_viewer_state;
     add_diff_to_history(app_state, history, diff);
 
-    *current_match_index = *current_match_index + 1;
     // Update the global match process gauge
     app_state->bottom_bar_state.num_matches_processed++;
+}
+
+void accept_all_changes_in_file(AppState* app_state)
+{
+    FilePickerState* file_picker = &app_state->file_picker_state;
+    if (not files_have_been_loaded(file_picker))
+    {
+        return;
+    }
+
+    while (true)
+    {
+        accept_current_change(app_state);
+
+        if (all_matches_processed_for_current_file(file_picker))
+        {
+            break;
+        }
+    }
 }
 
 void reject_current_change(AppState* app_state)
 {
     FilePickerState* file_picker = &app_state->file_picker_state;
-    if (file_picker->file_names.size() == 0)
+    if (not files_have_been_loaded(file_picker))
     {
         return;
     }
@@ -120,18 +166,17 @@ void reject_current_change(AppState* app_state)
     FileViewerState* file_viewer = &app_state->file_viewer_state;
     S32 selected_file_index = file_picker->selected_file_index;
     StringRef file_name = file_picker->file_names.at(file_picker->selected_file_index);
-    U32* current_match_index = &(file_picker->file_to_currently_selected_match.at(file_picker->selected_file_index));
 
     if (file_picker->file_names.size() <= file_picker->selected_file_index)
     {
         return;
     }
-    else if (*current_match_index >= (file_picker->file_to_matches.at(file_name).size()))
+    else if (all_matches_processed_for_current_file(file_picker))
     {
         return;
     }
 
-    ag_result::ag_match current_match = get_current_match(file_picker);
+    ag_result::ag_match current_match = pop_current_match(file_picker);
 
     auto diff = TextDiff {
         .accepted = false,
@@ -145,16 +190,16 @@ void reject_current_change(AppState* app_state)
     HistoryViewerState* history = &app_state->history_viewer_state;
     add_diff_to_history(app_state, history, diff);
 
-    *current_match_index = *current_match_index + 1;
     // Update the global match process gauge
     app_state->bottom_bar_state.num_matches_processed++;
 }
 
 void
-populate_file_viewer_state(AppState* app_state)
+populate_file_viewer_state(AppState* app_state, FileViewerMode mode)
 {
     FilePickerState* file_picker = &app_state->file_picker_state;
     FileViewerState* file_viewer = &app_state->file_viewer_state;
+    file_viewer->mode = mode;
     bool have_files = app_state->file_picker_state.file_names.size() > 0;
     U32 selected_file_index = file_picker->selected_file_index;
     file_viewer->file_name =
@@ -168,14 +213,16 @@ populate_file_viewer_state(AppState* app_state)
     }
 
     StringRef file_name = file_picker->file_names.at(selected_file_index);
-    U32 match_index = file_picker->file_to_currently_selected_match.at(selected_file_index);
 
-    if (match_index >= file_picker->file_to_matches.at(file_name).size())
+    if (all_matches_processed_for_file(file_picker, file_name)
+        and mode == FileViewerMode::FILE_MATCH_VIEWER)
     {
+        file_viewer->prev_lines.clear();
+        file_viewer->new_lines.clear();
         return;
     }
 
-    ag_result::ag_match match = file_picker->file_to_matches.at(file_name).at(match_index);
+    ByteSlice current_match_byte_slice = get_current_match_byte_slice(app_state, mode);
 
     std::optional<FileManager> file_manager_opt = functional::get_from_map_by_value(file_picker->file_managers, selected_file_index);
     if (not file_manager_opt.has_value())
@@ -195,11 +242,11 @@ populate_file_viewer_state(AppState* app_state)
     assert(x.size() > 0);
 
     log(app_state, "populating file viewer state");
-    file_viewer->prev_lines = get_lines_spanning_byte_slice(file_manager_opt.value(), byte_slice_from_match(match));
+    file_viewer->prev_lines = get_lines_spanning_byte_slice(file_manager_opt.value(), current_match_byte_slice);
 
-    FileManager replacement_file_manager = replace_text_in_file(file_manager_opt.value(), byte_slice_from_match(match), app_state->bottom_bar_state.replacement_text);
+    FileManager replacement_file_manager = replace_text_in_file(file_manager_opt.value(), current_match_byte_slice, app_state->bottom_bar_state.replacement_text);
 
-    auto replacement_slice = ByteSlice {.start = match.byte_start, .end = match.byte_start + app_state->bottom_bar_state.replacement_text.length()};
+    auto replacement_slice = ByteSlice {.start = current_match_byte_slice.start, .end = current_match_byte_slice.start + app_state->bottom_bar_state.replacement_text.length()};
     file_viewer->new_lines = get_lines_spanning_byte_slice(replacement_file_manager, replacement_slice);
     file_picker->replacement_file_managers.insert({selected_file_index, replacement_file_manager});
 }
@@ -214,22 +261,26 @@ populate_file_picker_state(AppState* app_state)
 
     for (U64 i = 0; i < searcher->num_results; i++)
     {
-        std::vector<ag_result::ag_match> matches;
+        std::deque<ag_result::ag_match> matches;
         for (U64 j = 0; j < searcher->results[i]->nmatches; j++)
         {
             ag_result::ag_match match = *searcher->results[i]->matches[j];
             matches.push_back(match);
             num_matches_found++;
         }
-        file_picker->file_to_matches[String(searcher->results[i]->file)] = matches;
+        String file_name = String(searcher->results[i]->file);
+        file_picker->file_to_matches[file_name] = matches;
     }
 
     app_state->bottom_bar_state.num_matches_found = num_matches_found;
 
-    U32 num_files = file_picker->file_to_matches.size();
     file_picker->file_names = functional::keys(file_picker->file_to_matches) % fn::to_vector();
-    file_picker->file_to_currently_selected_match.assign(num_files, 0);
     file_picker->file_names_as_displayed = functional::truncate_strings(file_picker->file_names, file_picker->current_width - 4);
+
+    for (U64 i = 0; i < file_picker->file_names.size(); i++)
+    {
+        file_picker->file_to_num_matches_found.push_back(file_picker->file_to_matches.at(file_picker->file_names.at(i)).size());
+    }
 
     app_state->actions_queue.push_back(Action {ActionType::FocusFilePicker});
     app_state->screen->PostEvent(Event::Custom);
@@ -347,7 +398,7 @@ BottomBar(AppState* app_state, ScreenInteractive* screen, BottomBarState* state)
                 hbox({text("Search directory: "), search_directory_input->Render()}),
             })| flex,
             separator(),
-            window(text(fmt::format("All matches processed [{}/{}]", state->num_matches_processed, state->num_matches_found)), gauge(percent_matches_processed)) | size(WIDTH, GREATER_THAN, 15),
+            window(text(fmt::format("Matches processed [{}/{}]", state->num_matches_processed, state->num_matches_found)), gauge(percent_matches_processed)) | size(WIDTH, GREATER_THAN, 15),
             separator(),
             search_button->Render(),
             commit_button->Render(),
@@ -365,7 +416,7 @@ BottomBar(AppState* app_state, ScreenInteractive* screen, BottomBarState* state)
 }
 
 Component
-FilePicker(ScreenInteractive* screen, FilePickerState* state)
+FilePicker(AppState* app_state, ScreenInteractive* screen, FilePickerState* state)
 {
     state->menu_options.style_normal = bgcolor(Color::Blue);
     state->menu_options.style_selected = bgcolor(Color::Yellow);
@@ -377,7 +428,12 @@ FilePicker(ScreenInteractive* screen, FilePickerState* state)
     /* auto file_picker_menu = Window(hbox({underlined(color(Color::GrayLight, text("F"))), text("iles")}) , Menu(&state->file_names_as_displayed, &state->selected_file_index, &state->menu_options)); */
     auto file_picker_menu = Menu(&state->file_names_as_displayed, &state->selected_file_index, &state->menu_options);
 
-    auto result = Renderer(file_picker_menu, [file_picker_menu] () {
+    auto result = Renderer(file_picker_menu, [app_state, file_picker_menu] () {
+        if (file_picker_menu->Focused())
+        {
+            populate_file_viewer_state(app_state, FileViewerMode::FILE_MATCH_VIEWER);
+        }
+
         return
             window(
                 hbox({underlined(color(Color::GrayLight, text("F"))), text("iles")}),
@@ -428,11 +484,21 @@ FileViewer(AppState* app_state, FileViewerState* state)
         }
     );
 
+    auto delete_diff_from_history_button = StyledButton(bgcolor(Color::RedLight),
+        [] () {
+            return hbox({bold(color(Color::DarkRed, text("D"))), text("elete from history")});
+        },
+        [app_state] () {
+            log(app_state, "pre, canceled");
+        }
+    );
+
     auto layout = Container::Horizontal({
         accept_button,
         reject_button,
         accept_all_in_file_button,
         reject_all_in_file_button,
+        delete_diff_from_history_button,
     });
 
     return Renderer(layout, [
@@ -441,17 +507,18 @@ FileViewer(AppState* app_state, FileViewerState* state)
             accept_button,
             reject_button,
             accept_all_in_file_button,
-            reject_all_in_file_button
+            reject_all_in_file_button,
+            delete_diff_from_history_button
         ] () {
-        populate_file_viewer_state(app_state);
+        FilePickerState* file_picker_state = &app_state->file_picker_state;
 
-        U32 num_matches_processed = get_num_matches_for_curr_file(&app_state->file_picker_state);
-        U32 curr_match = get_curr_match_for_curr_file(&app_state->file_picker_state);
+        U32 num_matches_found = get_num_matches_found_for_curr_file(file_picker_state);
+        U32 num_matches_processed = get_num_matches_processed_for_curr_file(file_picker_state);
 
         F32 percent_matches_processed = 0;
-        if (num_matches_processed > 0)
+        if (num_matches_found > 0)
         {
-            percent_matches_processed = curr_match / F32(num_matches_processed);
+            percent_matches_processed = num_matches_processed / F32(num_matches_found);
         }
 
         auto prev_lines_view = vbox(functional::text_views_from_file_lines(state->prev_lines, Color::Red, " -"));
@@ -460,7 +527,14 @@ FileViewer(AppState* app_state, FileViewerState* state)
         bool draw_buttons = state->prev_lines.size() > 0;
 
         Element match_choice_menu;
-        if (draw_buttons)
+        if (not draw_buttons)
+        {
+            match_choice_menu =
+                hbox({
+                    filler(),
+                });
+        }
+        else if (state->mode == FileViewerMode::FILE_MATCH_VIEWER)
         {
             match_choice_menu =
                 hbox({
@@ -470,24 +544,59 @@ FileViewer(AppState* app_state, FileViewerState* state)
                     accept_all_in_file_button->Render(),
                     reject_all_in_file_button->Render(),
                     filler(),
-                    window(text(fmt::format("File matches processed [{}/{}]", curr_match, num_matches_processed)), gauge(percent_matches_processed)) | size(WIDTH, GREATER_THAN, 15),
+                    window(text(fmt::format("File matches processed [{}/{}]", num_matches_processed, num_matches_found)), gauge(percent_matches_processed)) | size(WIDTH, GREATER_THAN, 15),
                 });
+
         }
-        else
+        else if (state->mode == FileViewerMode::HISTORY_DIFF_VIEWER)
         {
             match_choice_menu =
                 hbox({
                     filler(),
+                    delete_diff_from_history_button->Render(),
+                    filler(),
+                    window(text(fmt::format("File matches processed [{}/{}]", num_matches_processed, num_matches_found)), gauge(percent_matches_processed)) | size(WIDTH, GREATER_THAN, 15),
+                });
+
+        }
+
+        Element curr_diff_view;
+        if (not files_have_been_loaded(file_picker_state))
+        {
+            curr_diff_view =
+                hbox({
+                    filler(),
+                    text("No search executed"),
+                    filler(),
+                });
+        }
+        else if (all_matches_processed_for_current_file(file_picker_state)
+                 and state->mode == FileViewerMode::FILE_MATCH_VIEWER)
+        {
+            curr_diff_view =
+                hbox({
+                    filler(),
+                    text(fmt::format("{}/{} matches processed for this file",
+                            get_num_matches_processed_for_curr_file(file_picker_state),
+                            get_num_matches_processed_for_curr_file(file_picker_state)
+                    )),
+                    filler(),
+                });
+
+        } else {
+            curr_diff_view = vbox({
+                prev_lines_view | yflex_grow,
+                separatorHeavy(),
+                new_lines_view | yflex_grow,
                 });
         }
 
         return window(text(state->file_name),
                         vbox({
-                            /* hflow(paragraph(state->preamble)), */
                             filler(),
-                            prev_lines_view | yflex_grow,
-                            separatorHeavy(),
-                            new_lines_view | yflex_grow,
+                            curr_diff_view | flex,
+                            filler(),
+                            /* hflow(paragraph(state->preamble)), */
                             /* hflow(paragraph(state->postamble)), */
                             match_choice_menu,
                         })
@@ -508,7 +617,7 @@ DiffItem(const TextDiff& diff)
 }
 
 Component
-HistoryViewer(ScreenInteractive* screen, HistoryViewerState* state)
+HistoryViewer(AppState* app_state, ScreenInteractive* screen, HistoryViewerState* state)
 {
     state->menu_options.style_normal = bgcolor(Color::Blue);
     state->menu_options.style_selected = bgcolor(Color::Yellow);
@@ -517,7 +626,13 @@ HistoryViewer(ScreenInteractive* screen, HistoryViewerState* state)
     state->menu_options.on_enter = screen->ExitLoopClosure();
     auto history_list = ftxui_extras::FlexibleMenu(&state->diffs_as_displayed, &state->selected_diff, &state->menu_options);
 
-    return Renderer(history_list, [state, history_list] {
+    return Renderer(history_list, [app_state, state, history_list] {
+        if (history_list->Focused())
+        {
+            set_current_file_from_selected_diff(app_state);
+            populate_file_viewer_state(app_state, FileViewerMode::HISTORY_DIFF_VIEWER);
+        }
+
         return window(
             hbox({underlined(color(Color::GrayLight, text("H"))), text("istory")}),
             history_list->Render() | vscroll_indicator | frame
@@ -530,9 +645,9 @@ App(AppState* state)
 {
 
     auto top_bar = TopBar(&state->top_bar_state);
-    auto file_picker = FilePicker(state->screen, &state->file_picker_state);
+    auto file_picker = FilePicker(state, state->screen, &state->file_picker_state);
     auto file_viewer = FileViewer(state, &state->file_viewer_state);
-    auto history_viewer = HistoryViewer(state->screen, &state->history_viewer_state);
+    auto history_viewer = HistoryViewer(state, state->screen, &state->history_viewer_state);
     auto bottom_bar = BottomBar(state, state->screen, &state->bottom_bar_state);
 
     auto layout = Container::Vertical({
@@ -566,9 +681,13 @@ App(AppState* state)
             {
                 accept_current_change(state);
             }
-            else if (character == "r")
+            else if (character == "n")
             {
                 reject_current_change(state);
+            }
+            else if (character == "s")
+            {
+                accept_all_changes_in_file(state);
             }
         }
         else if (event == Event::Custom)
@@ -579,6 +698,7 @@ App(AppState* state)
             switch (action.type)
             {
                 case ActionType::FocusFilePicker: file_picker->TakeFocus();
+                case ActionType::NoOp: {};
                 default: {}
             }
         }
