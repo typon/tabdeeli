@@ -36,6 +36,7 @@ struct FileLine
 {
     std::string content;
     U32 lineno;
+    U64 start_column;
 };
 
 struct FileManager
@@ -54,9 +55,12 @@ struct Action {
 
 struct TextDiff
 {
+    B32 accepted;
     ByteSlice byte_slice;
     String file_name;
     String replacement_text;
+    U64 start_line_no;
+    U64 start_column;
 };
 
 struct TopBarState
@@ -91,6 +95,8 @@ struct FilePickerState
 
     U64 min_width;
     U64 max_width;
+    F32 width_ratio;
+    U32 current_width;
 };
 
 struct FileViewerState
@@ -103,6 +109,9 @@ struct FileViewerState
     String postamble;
     String accept_button_label;
     String reject_button_label;
+
+    F32 width_ratio;
+    U32 current_width;
 };
 
 struct HistoryViewerState
@@ -114,6 +123,8 @@ struct HistoryViewerState
 
     U64 min_width;
     U64 max_width;
+    F32 width_ratio;
+    U32 current_width;
 };
 
 using Logger = fmt::v8::ostream;

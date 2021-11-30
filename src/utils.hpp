@@ -27,6 +27,7 @@ std::string trim(const std::string &s);
 std::string rtrim(const std::string &s);
 std::string ltrim(const std::string &s);
 std::vector<std::string> split_string(const std::string& s, U32 every_n_chars);
+std::vector<U32> split_term_x_into_three_by_ratios(U32 total_width, F32 first, F32 second, F32 third);
 }
 
 namespace tb::functional

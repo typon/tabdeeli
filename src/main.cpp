@@ -61,6 +61,8 @@ int main(int argc, char* argv[]) {
             .file_names = {},
             .min_width = 40,
             .max_width = 60,
+            .width_ratio = F32(1)/F32(5),
+            .current_width = 0,
         },
         .file_viewer_state = FileViewerState {
             .file_name = NO_FILE_LOADED,
@@ -68,13 +70,17 @@ int main(int argc, char* argv[]) {
             .prev_lines = {},
             .new_lines = {},
             .postamble = "",
+            .width_ratio = F32(3)/F32(5),
+            .current_width = 0,
         },
         .history_viewer_state = HistoryViewerState {
             .selected_diff = 0,
             .diffs = {},
             .diffs_as_displayed = {},
             .min_width = 30,
-            .max_width = 40,
+            .max_width = 100,
+            .width_ratio = F32(1)/F32(5),
+            .current_width = 0,
         },
         .bottom_bar_state = BottomBarState {
             .search_text = search_text,

@@ -15,7 +15,7 @@ using tb::meta::to_string;
 TEST_CASE("Make file manager", "[file_manager]" ) {
     String file_name = "/home/typon/gitz/tabdeeli/tests/test_file.cpp";
     tb::FileManager fm = tb::read_file_into_file_manager(file_name);
-    REQUIRE(fm.line_start_byte_indices.size() == 7);
+    REQUIRE(fm.line_start_byte_indices.size() == 8);
 }
 
 TEST_CASE("Extract Lines from Byte Slice 0", "[file_manager]" ) {
@@ -45,7 +45,7 @@ TEST_CASE("Extract Lines from Byte Slice 0", "[file_manager]" ) {
 
     std::tie(start, end) = tb::get_line_indices_spanning_byte_slice(fm, tb::ByteSlice {.start = 0, .end = 1000});
     REQUIRE(start == 0);
-    REQUIRE(end == 6);
+    REQUIRE(end == 7);
 
     std::tie(start, end) = tb::get_line_indices_spanning_byte_slice(fm, tb::ByteSlice {.start = 0, .end = 124});
     REQUIRE(start == 0);
@@ -99,6 +99,25 @@ TEST_CASE("Extract Lines from Byte Slice 2", "[file_manager]" ) {
     REQUIRE(lines.at(1).content == "// Line 2");
     REQUIRE(lines.at(1).lineno == 1);
 
+}
+
+TEST_CASE("Test column number", "[file_manager]" ) {
+    String file_name = "/home/typon/gitz/tabdeeli/tests/test_file.cpp";
+    tb::FileManager fm = tb::read_file_into_file_manager(file_name);
+
+    std::vector<tb::FileLine> lines = tb::get_lines_spanning_byte_slice(fm, tb::ByteSlice {.start = 24, .end = 46});
+    REQUIRE(lines.size() == 2);
+    REQUIRE(lines.at(0).content == "// Line 3 Blah blah blah");
+    REQUIRE(lines.at(0).lineno == 2);
+    REQUIRE(lines.at(0).start_column == 5);
+    REQUIRE(lines.at(1).content == "// Line 4");
+    REQUIRE(lines.at(1).lineno == 3);
+
+    lines = tb::get_lines_spanning_byte_slice(fm, tb::ByteSlice {.start = 3, .end = 5});
+    REQUIRE(lines.size() == 1);
+    REQUIRE(lines.at(0).content == "// Line 1");
+    REQUIRE(lines.at(0).lineno == 0);
+    REQUIRE(lines.at(0).start_column == 4);
 }
 
 TEST_CASE("Test json conversion", "[json]" ) {

@@ -215,7 +215,20 @@ get_lines_spanning_byte_slice(const FileManager& file_manager, ByteSlice byte_sl
                 file_manager.contents.size() - 1 :
                 file_manager.line_start_byte_indices.at(lineno + 1) - 1; // - 1 to discount \n
         U64 num_bytes = end_byte - start_byte;
-        result.push_back(FileLine{.content = file_manager.contents.substr(start_byte, num_bytes), .lineno = lineno });
+
+        U64 start_column = -1;
+        if (lineno == start_line)
+        {
+            start_column = byte_slice.start - start_byte;
+            start_column = start_column;
+        }
+
+
+        result.push_back(FileLine {
+            .content = file_manager.contents.substr(start_byte, num_bytes),
+            .lineno = lineno,
+            .start_column = start_column,
+        });
     }
     return result;
 }
@@ -231,6 +244,16 @@ replace_text_in_file(const FileManager& file_manager, ByteSlice byte_slice, Stri
     result.line_start_byte_indices = get_line_start_byte_indices_for_file(result.contents);
 
     return result;
+}
+
+std::vector<U32>
+split_term_x_into_three_by_ratios(U32 total_width, F32 first, F32 second, F32 third)
+{
+    return {
+        U32(first * total_width),
+        U32(second * total_width),
+        U32(third * total_width),
+    };
 }
 
 } // end of namespace

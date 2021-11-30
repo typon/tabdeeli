@@ -49,8 +49,8 @@ class MenuBase : public ComponentBase {
                                                       : ftxui::select;
             auto icon = is_selected ? "> " : "  ";
             auto item = vbox({
-                text(icon + std::get<0>(entries_[i])),
-                text(std::get<1>(entries_[i]))
+                text(icon + std::get<0>(entries_[i])) | flex,
+                text(std::get<1>(entries_[i])) | flex
             });
             /* auto item = text(icon + std::get<0>(entries_[i])); */
             elements.push_back(item | style | focus_management |

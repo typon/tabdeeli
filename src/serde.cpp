@@ -9,8 +9,8 @@ String replacement_mode_serialize(ReplacementMode src)
     {
         case ReplacementMode::REGEX: return "REGEX";
         case ReplacementMode::PYTHON: return "PYTHON";
+        default: return "REGEX";
     }
-
 }
 
 } //end namespace tb

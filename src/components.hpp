@@ -21,7 +21,6 @@ AppComponent App(AppState* state);
 namespace ftxui_extras
 {
 ftxui::Component StyledButton(
-    ftxui::ConstStringRef label,
     ftxui::Decorator default_style,
     std::function<ftxui::Element()> label_text_element_callback_,
     std::function<void()> on_click,

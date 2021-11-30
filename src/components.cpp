@@ -52,10 +52,11 @@ void reset_state_before_search(AppState* app_state)
     history->selected_diff = 0;
 }
 
-void add_diff_to_history(HistoryViewerState* history, const TextDiff& diff)
+void add_diff_to_history(AppState* state, HistoryViewerState* history, const TextDiff& diff)
 {
+    update_view_widths(state);
     history->diffs.push_back(diff);
-    history->diffs_as_displayed.push_back(diff_display_item_from_diff(diff));
+    history->diffs_as_displayed.push_back(diff_display_item_from_diff(diff, history->current_width - 4));
 }
 
 ag_result::ag_match get_current_match(FilePickerState* file_picker)
@@ -67,9 +68,15 @@ ag_result::ag_match get_current_match(FilePickerState* file_picker)
 
 void accept_current_change(AppState* app_state)
 {
+    FilePickerState* file_picker = &app_state->file_picker_state;
+    if (file_picker->file_names.size() == 0)
+    {
+        return;
+    }
+
     log(app_state, "Accepting change");
 
-    FilePickerState* file_picker = &app_state->file_picker_state;
+    FileViewerState* file_viewer = &app_state->file_viewer_state;
     S32 selected_file_index = file_picker->selected_file_index;
     StringRef file_name = file_picker->file_names.at(file_picker->selected_file_index);
     U32* current_match_index = &(file_picker->file_to_currently_selected_match.at(file_picker->selected_file_index));
@@ -85,22 +92,62 @@ void accept_current_change(AppState* app_state)
 
     ag_result::ag_match current_match = get_current_match(file_picker);
 
-
-    TextDiff diff = make_text_diff(current_match, file_name, app_state->bottom_bar_state.replacement_text);
+    auto diff = TextDiff {
+        .accepted = true,
+        .byte_slice = {.start = current_match.byte_start, .end = current_match.byte_end},
+        .file_name = file_name,
+        .replacement_text = app_state->bottom_bar_state.replacement_text,
+        .start_line_no = file_viewer->prev_lines.at(0).lineno,
+        .start_column = file_viewer->prev_lines.at(0).start_column,
+    };
 
     HistoryViewerState* history = &app_state->history_viewer_state;
-    add_diff_to_history(history, diff);
-
+    add_diff_to_history(app_state, history, diff);
 
     *current_match_index = *current_match_index + 1;
     // Update the global match process gauge
     app_state->bottom_bar_state.num_matches_processed++;
-
 }
 
 void reject_current_change(AppState* app_state)
 {
-    log(app_state, "Accepting change");
+    FilePickerState* file_picker = &app_state->file_picker_state;
+    if (file_picker->file_names.size() == 0)
+    {
+        return;
+    }
+
+    FileViewerState* file_viewer = &app_state->file_viewer_state;
+    S32 selected_file_index = file_picker->selected_file_index;
+    StringRef file_name = file_picker->file_names.at(file_picker->selected_file_index);
+    U32* current_match_index = &(file_picker->file_to_currently_selected_match.at(file_picker->selected_file_index));
+
+    if (file_picker->file_names.size() <= file_picker->selected_file_index)
+    {
+        return;
+    }
+    else if (*current_match_index >= (file_picker->file_to_matches.at(file_name).size()))
+    {
+        return;
+    }
+
+    ag_result::ag_match current_match = get_current_match(file_picker);
+
+    auto diff = TextDiff {
+        .accepted = false,
+        .byte_slice = {.start = current_match.byte_start, .end = current_match.byte_end},
+        .file_name = file_name,
+        .replacement_text = app_state->bottom_bar_state.replacement_text,
+        .start_line_no = file_viewer->prev_lines.at(0).lineno,
+        .start_column = file_viewer->prev_lines.at(0).start_column,
+    };
+
+    HistoryViewerState* history = &app_state->history_viewer_state;
+    add_diff_to_history(app_state, history, diff);
+
+    *current_match_index = *current_match_index + 1;
+    // Update the global match process gauge
+    app_state->bottom_bar_state.num_matches_processed++;
 }
 
 void
@@ -182,7 +229,7 @@ populate_file_picker_state(AppState* app_state)
     U32 num_files = file_picker->file_to_matches.size();
     file_picker->file_names = functional::keys(file_picker->file_to_matches) % fn::to_vector();
     file_picker->file_to_currently_selected_match.assign(num_files, 0);
-    file_picker->file_names_as_displayed = functional::truncate_strings(file_picker->file_names, file_picker->min_width);
+    file_picker->file_names_as_displayed = functional::truncate_strings(file_picker->file_names, file_picker->current_width - 4);
 
     app_state->actions_queue.push_back(Action {ActionType::FocusFilePicker});
     app_state->screen->PostEvent(Event::Custom);
@@ -229,7 +276,7 @@ BottomBarComponent
 BottomBar(AppState* app_state, ScreenInteractive* screen, BottomBarState* state)
 {
 
-    auto search_button = StyledButton(&state->search_button_label,  bgcolor(Color::Blue),
+    auto search_button = StyledButton(bgcolor(Color::Blue),
         [] () {
             return hbox({underlined(color(Color::DarkBlue, text("S"))), text("earch")});
         },
@@ -243,7 +290,7 @@ BottomBar(AppState* app_state, ScreenInteractive* screen, BottomBarState* state)
         }
     );
 
-    auto commit_button = StyledButton(&state->commit_button_label, bgcolor(Color::Green),
+    auto commit_button = StyledButton(bgcolor(Color::Green),
         [] () {
             return hbox({underlined(color(Color::DarkGreen, text("C"))), text("ommit")});
         },
@@ -252,7 +299,7 @@ BottomBar(AppState* app_state, ScreenInteractive* screen, BottomBarState* state)
         }
     );
 
-    auto cancel_button = StyledButton(&state->cancel_button_label, bgcolor(Color::RedLight),
+    auto cancel_button = StyledButton(bgcolor(Color::RedLight),
         [] () {
             return hbox({text("Cance"), underlined(color(Color::DarkRed, text("l")))});
         },
@@ -345,18 +392,36 @@ FilePicker(ScreenInteractive* screen, FilePickerState* state)
 Component
 FileViewer(AppState* app_state, FileViewerState* state)
 {
-    auto accept_button = StyledButton(&state->accept_button_label, bgcolor(Color::Green),
+    auto accept_button = StyledButton(bgcolor(Color::Green),
         [] () {
-            return hbox({bold(color(Color::DarkGreen, text("A"))), text("ccept")});
+            return hbox({bold(color(Color::DarkGreen, text("Y"))), text("es")});
+        },
+        [app_state] () {
+            accept_current_change(app_state);
+        }
+    );
+
+    auto accept_all_in_file_button = StyledButton(bgcolor(Color::Green),
+        [] () {
+            return hbox({text("Ye"), bold(color(Color::DarkGreen, text("s"))), text(" - all in file")});
         },
         [app_state] () {
             log(app_state, "pre, accepted");
         }
     );
 
-    auto reject_button = StyledButton(&state->reject_button_label, bgcolor(Color::RedLight),
+    auto reject_button = StyledButton(bgcolor(Color::RedLight),
         [] () {
-            return hbox({bold(color(Color::DarkRed, text("R"))), text("eject")});
+            return hbox({bold(color(Color::DarkRed, text("N"))), text("o")});
+        },
+        [app_state] () {
+            log(app_state, "pre, canceled");
+        }
+    );
+
+    auto reject_all_in_file_button = StyledButton(bgcolor(Color::RedLight),
+        [] () {
+            return hbox({text("N"), bold(color(Color::DarkRed, text("o"))), text(" - all in file")});
         },
         [app_state] () {
             log(app_state, "pre, canceled");
@@ -366,9 +431,18 @@ FileViewer(AppState* app_state, FileViewerState* state)
     auto layout = Container::Horizontal({
         accept_button,
         reject_button,
+        accept_all_in_file_button,
+        reject_all_in_file_button,
     });
 
-    return Renderer(layout, [app_state, state, accept_button, reject_button] () {
+    return Renderer(layout, [
+            app_state,
+            state,
+            accept_button,
+            reject_button,
+            accept_all_in_file_button,
+            reject_all_in_file_button
+        ] () {
         populate_file_viewer_state(app_state);
 
         U32 num_matches_processed = get_num_matches_for_curr_file(&app_state->file_picker_state);
@@ -393,6 +467,8 @@ FileViewer(AppState* app_state, FileViewerState* state)
                     filler(),
                     accept_button->Render(),
                     reject_button->Render(),
+                    accept_all_in_file_button->Render(),
+                    reject_all_in_file_button->Render(),
                     filler(),
                     window(text(fmt::format("File matches processed [{}/{}]", curr_match, num_matches_processed)), gauge(percent_matches_processed)) | size(WIDTH, GREATER_THAN, 15),
                 });
@@ -410,8 +486,8 @@ FileViewer(AppState* app_state, FileViewerState* state)
                             /* hflow(paragraph(state->preamble)), */
                             filler(),
                             prev_lines_view | yflex_grow,
+                            separatorHeavy(),
                             new_lines_view | yflex_grow,
-                            filler(),
                             /* hflow(paragraph(state->postamble)), */
                             match_choice_menu,
                         })
@@ -468,13 +544,16 @@ App(AppState* state)
     });
 
     auto self = Renderer(layout, [state, top_bar, file_picker, file_viewer, history_viewer, bottom_bar] () {
+
+        update_view_widths(state);
+
         return vbox({
             top_bar->Render(),
             separator(),
             hbox({
-                file_picker->Render() | size (WIDTH, LESS_THAN, state->file_picker_state.max_width) | size(WIDTH, GREATER_THAN, state->file_picker_state.min_width),
-                file_viewer->Render() | flex,
-                history_viewer->Render() | size (WIDTH, LESS_THAN, state->history_viewer_state.max_width) | size(WIDTH, GREATER_THAN, state->history_viewer_state.min_width),
+                file_picker->Render() | size(WIDTH, GREATER_THAN, state->file_picker_state.current_width),
+                file_viewer->Render() | size(WIDTH, GREATER_THAN, state->file_viewer_state.current_width) | flex,
+                history_viewer->Render() | size(WIDTH, GREATER_THAN, state->history_viewer_state.current_width),
             }) | flex,
             separator(),
             bottom_bar.self->Render(),
@@ -483,7 +562,7 @@ App(AppState* state)
     self = CatchEvent(self, [state, file_picker, history_viewer, bottom_bar] (Event event) {
         if (event.is_character()) {
             String character = event.character();
-            if (character == "a")
+            if (character == "y")
             {
                 accept_current_change(state);
             }
