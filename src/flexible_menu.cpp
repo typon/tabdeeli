@@ -29,8 +29,8 @@ using namespace ftxui;
 /// @ingroup component
 class MenuBase : public ComponentBase {
  public:
-  MenuBase(StringPairsConstRef entries, int* selected, Ref<MenuOption> option)
-      : entries_(entries), selected_(selected), option_(option) {}
+  MenuBase(StringPairsConstRef entries, int* selected, bool is_focusable, Ref<MenuOption> option)
+      : entries_(entries), selected_(selected), is_focusable_(is_focusable), option_(option) {}
 
     Element Render() override {
         Elements elements;
@@ -142,13 +142,14 @@ class MenuBase : public ComponentBase {
     return true;
   }
 
-  bool Focusable() const final { return entries_.size(); }
+  bool Focusable() const final { return entries_.size() > 0 and this->is_focusable_; }
   int& focused_entry() { return option_->focused_entry(); }
 
  protected:
   StringPairsConstRef entries_;
   int* selected_ = 0;
   Ref<MenuOption> option_;
+  bool is_focusable_ = true;
 
   std::vector<Box> boxes_;
   Box box_;
@@ -184,8 +185,9 @@ class MenuBase : public ComponentBase {
 /// ```
 Component FlexibleMenu(StringPairsConstRef entries,
                int* selected,
+               bool is_focusable,
                Ref<MenuOption> option) {
-  return Make<MenuBase>(entries, selected, std::move(option));
+  return Make<MenuBase>(entries, selected, is_focusable, std::move(option));
 }
 
 }  // end namespace ftxui_extras
