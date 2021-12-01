@@ -14,11 +14,19 @@ namespace tb
 
 using Logger = fmt::v8::ostream;
 
+enum class SearcherState
+{
+    NO_RESULTS_FOUND,
+    RESULTS_FOUND,
+    NO_SEARCH_EXECUTED,
+};
+
 struct Searcher
 {
     U64 num_results;
     ag_result** results = nullptr;
     ag_config config;
+    SearcherState state;
 };
 
 

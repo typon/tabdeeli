@@ -17,6 +17,7 @@ Searcher init_searcher()
 	result.config.search_binary_files = 0;
 	result.config.num_workers = 4;
     ag_init_config(&result.config);
+    result.state = SearcherState::NO_SEARCH_EXECUTED;
 
     return result;
 }
@@ -27,21 +28,12 @@ void execute_search(Searcher* searcher, Logger* logger, StringRef search_text, S
 	searcher->results = ag_search_ts(const_cast<char*>(search_text.get().data()), paths.size(), vector_of_strings_to_double_char_array(paths), &searcher->num_results);
 	if (not searcher->results)
     {
+        searcher->state = SearcherState::NO_RESULTS_FOUND;
 		log(logger, "no results_found");
     }
 	else
     {
-		/* log(logger, fmt::format("{} results found", searcher->num_results)); */
-		/*         for (size_t i = 0; i < searcher->num_results; i++) { */
-		/*             for (size_t j = 0; j < searcher->results[i]->nmatches; j++) { */
-		/*                 log(logger, fmt::format("file: {}, match: {}, byte_start: {}, byte_end: {}", */
-		/*                                 searcher->results[i]->file, */
-		/*                                 searcher->results[i]->matches[j]->match, */
-		/*                                 searcher->results[i]->matches[j]->byte_start, */
-		/*                                 searcher->results[i]->matches[j]->byte_end */
-		/*                 )); */
-		/*             } */
-		/*         } */
+        searcher->state = SearcherState::RESULTS_FOUND;
     }
 }
 

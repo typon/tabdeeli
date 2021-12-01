@@ -47,6 +47,7 @@ U32 get_num_matches_processed_for_curr_file(FilePickerState* file_picker)
     }
     auto remaining = file_picker->file_to_matches.at(curr_file_name(file_picker)).size();
     auto found = get_num_matches_found_for_curr_file(file_picker);
+    assert(found >= remaining);
     return found - remaining;
 }
 
@@ -88,6 +89,11 @@ B32 files_have_been_loaded(FilePickerState* file_picker)
     {
         return true;
     }
+}
+
+B32 history_has_diffs(HistoryViewerState* history)
+{
+    return history->diffs.size() > 0;
 }
 
 } // end namespace tb

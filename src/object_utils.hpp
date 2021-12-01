@@ -15,5 +15,6 @@ void update_view_widths(AppState* state);
 B32 all_matches_processed_for_file(FilePickerState* file_picker, StringRef file_name);
 B32 all_matches_processed_for_current_file(FilePickerState* file_picker);
 B32 files_have_been_loaded(FilePickerState* file_picker);
+B32 history_has_diffs(HistoryViewerState* history);
 
 } // end namespace tb
