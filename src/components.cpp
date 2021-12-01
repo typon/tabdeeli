@@ -734,25 +734,31 @@ App(AppState* state)
     self = CatchEvent(self, [state, file_picker, history_viewer, bottom_bar] (Event event) {
         if (event.is_character()) {
             String character = event.character();
-            if (character == "y")
+            if (file_picker->Focused())
             {
-                add_current_change_to_diff_history(state, true);
+                if (character == "y")
+                {
+                    add_current_change_to_diff_history(state, true);
+                }
+                else if (character == "n")
+                {
+                    add_current_change_to_diff_history(state, false);
+                }
+                else if (character == "s")
+                {
+                    accept_all_changes_in_file(state);
+                }
+                else if (character == "o")
+                {
+                    reject_all_changes_in_file(state);
+                }
             }
-            else if (character == "n")
+            else if (history_viewer->Focused())
             {
-                add_current_change_to_diff_history(state, false);
-            }
-            else if (character == "s")
-            {
-                accept_all_changes_in_file(state);
-            }
-            else if (character == "o")
-            {
-                reject_all_changes_in_file(state);
-            }
-            else if (character == "d")
-            {
-                delete_diff_from_history(state);
+                if (character == "d")
+                {
+                    delete_diff_from_history(state);
+                }
             }
         }
         else if (event == Event::Custom)
