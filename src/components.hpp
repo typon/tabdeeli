@@ -26,6 +26,11 @@ ftxui::Component StyledButton(
     std::function<void()> on_click,
     ftxui::Ref<ftxui::ButtonOption> = {});
 
-ftxui::Component FlexibleMenu(tb::StringPairsConstRef entries, int* selected, ftxui::Ref<ftxui::MenuOption> option);
+ftxui::Component FlexibleMenu(tb::StringPairsConstRef entries, int* selected, bool is_focusable, ftxui::Ref<ftxui::MenuOption> option);
+ftxui::Component FlexibleHorizontal(ftxui::Components children, bool is_focusable);
+ftxui::Component FlexibleHorizontal(ftxui::Components children, bool is_focusable, int* selector);
+ftxui::Component FlexibleVertical(ftxui::Components children, bool is_focusable);
+ftxui::Component FlexibleVertical(ftxui::Components children, bool is_focusable, int* selector);
+ftxui::Component FlexibleInput(ftxui::StringRef content, ftxui::ConstStringRef placeholder, ftxui::Ref<ftxui::InputOption> option);
 ftxui::Elements flexible_paragraph(std::string longstring, tb::U32 max_line_width);
 } // end namespace ftxui_extras

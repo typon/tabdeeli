@@ -78,6 +78,8 @@ add_executable(tabdeeli
     src/metaprogramming.cpp
     src/flexible_paragraph.cpp
     src/flexible_menu.cpp
+    src/flexible_container.cpp
+    src/flexible_input.cpp
 )
 
 add_executable(tabdeeli_unit_tests
