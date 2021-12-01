@@ -96,4 +96,18 @@ B32 history_has_diffs(HistoryViewerState* history)
     return history->diffs.size() > 0;
 }
 
+ag_result::ag_match match_from_text_diff(const TextDiff& diff)
+{
+    return ag_result::ag_match {
+        .byte_start = diff.byte_slice.start,
+        .byte_end = diff.byte_slice.end,
+        .match = nullptr,
+    };
+}
+
+B32 is_current_diff_valid(HistoryViewerState* history)
+{
+    return history_has_diffs(history) and (history->selected_diff < history->diffs.size());
+}
+
 } // end namespace tb

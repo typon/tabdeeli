@@ -103,6 +103,30 @@ ByteSlice get_current_match_byte_slice(AppState* app_state, FileViewerMode mode)
     }
 }
 
+void delete_diff_from_history(AppState* app_state)
+{
+    HistoryViewerState* history = &app_state->history_viewer_state;
+    if (not is_current_diff_valid(history))
+    {
+        return;
+    }
+
+    const TextDiff& selected_diff = history->diffs.at(history->selected_diff);
+    FilePickerState* file_picker = &app_state->file_picker_state;
+    StringRef file_name = selected_diff.file_name;
+
+    ag_result::ag_match match = match_from_text_diff(selected_diff);
+
+    file_picker->file_to_matches.at(file_name).push_back(match);
+
+    history->diffs.erase(history->diffs.begin() + history->selected_diff);
+    history->diffs_as_displayed.erase(history->diffs_as_displayed.begin() + history->selected_diff);
+
+    // Update the global match process gauge
+    app_state->bottom_bar_state.num_matches_processed--;
+
+}
+
 void add_current_change_to_diff_history(AppState* app_state, B32 is_accepted)
 {
     FilePickerState* file_picker = &app_state->file_picker_state;
@@ -417,7 +441,6 @@ FilePicker(AppState* app_state, ScreenInteractive* screen, FilePickerState* stat
     state->menu_options.style_selected = bgcolor(Color::Yellow);
     state->menu_options.style_focused = bgcolor(Color::Red);
     state->menu_options.style_selected_focused = bgcolor(Color::Red);
-    state->menu_options.on_enter = screen->ExitLoopClosure();
 
 
     /* auto file_picker_menu = Window(hbox({underlined(color(Color::GrayLight, text("F"))), text("iles")}) , Menu(&state->file_names_as_displayed, &state->selected_file_index, &state->menu_options)); */
@@ -484,7 +507,7 @@ FileViewer(AppState* app_state, FileViewerState* state)
             return hbox({bold(color(Color::DarkRed, text("D"))), text("elete from history")});
         },
         [app_state] () {
-            log(app_state, "pre, canceled");
+            delete_diff_from_history(app_state);
         }
     );
 
@@ -551,12 +574,31 @@ FileViewer(AppState* app_state, FileViewerState* state)
                 });
 
         }
-        else if (state->mode == FileViewerMode::HISTORY_DIFF_VIEWER)
+        else if (state->mode == FileViewerMode::HISTORY_DIFF_VIEWER and history_has_diffs(&app_state->history_viewer_state))
         {
             match_choice_menu =
                 hbox({
                     filler(),
-                    hbox({bold(color(Color::DarkRed, text("D"))), text("elete from history")}) | border,
+                    hbox({bold(color(Color::RedLight, text("D"))), text("elete from history")}) | border,
+                    filler(),
+                    window(text(fmt::format("File matches processed [{}/{}]", num_matches_processed, num_matches_found)), gauge(percent_matches_processed)) | size(WIDTH, GREATER_THAN, 15),
+                });
+
+        }
+        else if (state->mode == FileViewerMode::HISTORY_DIFF_VIEWER and not history_has_diffs(&app_state->history_viewer_state))
+        {
+            match_choice_menu =
+                hbox({
+                    filler(),
+                    window(text(fmt::format("File matches processed [{}/{}]", num_matches_processed, num_matches_found)), gauge(percent_matches_processed)) | size(WIDTH, GREATER_THAN, 15),
+                });
+        }
+        else
+        {
+            match_choice_menu =
+                hbox({
+                    filler(),
+                    hbox({text("?")}),
                     filler(),
                     window(text(fmt::format("File matches processed [{}/{}]", num_matches_processed, num_matches_found)), gauge(percent_matches_processed)) | size(WIDTH, GREATER_THAN, 15),
                 });
@@ -637,7 +679,6 @@ HistoryViewer(AppState* app_state, ScreenInteractive* screen, HistoryViewerState
     state->menu_options.style_selected = bgcolor(Color::Yellow);
     state->menu_options.style_focused = bgcolor(Color::Red);
     state->menu_options.style_selected_focused = bgcolor(Color::Red);
-    state->menu_options.on_enter = screen->ExitLoopClosure();
 
     bool is_focusable = false;
     auto history_list = ftxui_extras::FlexibleMenu(&state->diffs_as_displayed, &state->selected_diff, is_focusable, &state->menu_options);
@@ -708,6 +749,10 @@ App(AppState* state)
             else if (character == "o")
             {
                 reject_all_changes_in_file(state);
+            }
+            else if (character == "d")
+            {
+                delete_diff_from_history(state);
             }
         }
         else if (event == Event::Custom)
