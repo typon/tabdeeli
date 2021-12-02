@@ -440,21 +440,29 @@ FilePicker(AppState* app_state, ScreenInteractive* screen, FilePickerState* stat
     state->menu_options.style_normal = bgcolor(Color::Blue);
     state->menu_options.style_selected = bgcolor(Color::Yellow);
     state->menu_options.style_focused = bgcolor(Color::Red);
-    state->menu_options.style_selected_focused = bgcolor(Color::Red);
+    state->menu_options.style_selected_focused = bgcolor(Color::Red) | bold;
 
 
     /* auto file_picker_menu = Window(hbox({underlined(color(Color::GrayLight, text("F"))), text("iles")}) , Menu(&state->file_names_as_displayed, &state->selected_file_index, &state->menu_options)); */
     auto file_picker_menu = Menu(&state->file_names_as_displayed, &state->selected_file_index, &state->menu_options);
 
-    auto result = Renderer(file_picker_menu, [app_state, file_picker_menu] () {
+    auto result = Renderer(file_picker_menu, [app_state, state, file_picker_menu] () {
         if (file_picker_menu->Focused())
         {
             populate_file_viewer_state(app_state, FileViewerMode::FILE_MATCH_VIEWER);
         }
 
+        auto selection_count_display = files_have_been_loaded(state) ?
+            text(fmt::format(" - [{}/{}]", state->selected_file_index + 1, state->file_to_matches.size())) :
+            nothing(text(""));
+
         return
             window(
-                hbox({underlined(color(Color::GrayLight, text("F"))), text("iles")}),
+                hbox({
+                    underlined(color(Color::GrayLight, text("F"))),
+                    text("iles"),
+                    selection_count_display,
+                }),
                 file_picker_menu->Render() | vscroll_indicator | frame
             );
     });
@@ -678,7 +686,7 @@ HistoryViewer(AppState* app_state, ScreenInteractive* screen, HistoryViewerState
     state->menu_options.style_normal = bgcolor(Color::Blue);
     state->menu_options.style_selected = bgcolor(Color::Yellow);
     state->menu_options.style_focused = bgcolor(Color::Red);
-    state->menu_options.style_selected_focused = bgcolor(Color::Red);
+    state->menu_options.style_selected_focused = bgcolor(Color::Red) | bold;
 
     bool is_focusable = false;
     auto history_list = ftxui_extras::FlexibleMenu(&state->diffs_as_displayed, &state->selected_diff, is_focusable, &state->menu_options);
@@ -690,8 +698,16 @@ HistoryViewer(AppState* app_state, ScreenInteractive* screen, HistoryViewerState
             populate_file_viewer_state(app_state, FileViewerMode::HISTORY_DIFF_VIEWER);
         }
 
+        auto selection_count_display = state->diffs.size() == 0 ?
+            nothing(text("")) :
+            text(fmt::format(" - [{}/{}]", state->selected_diff + 1, state->diffs.size()));
+
         return window(
-            hbox({underlined(color(Color::GrayLight, text("H"))), text("istory")}),
+            hbox({
+                underlined(color(Color::GrayLight, text("H"))),
+                text("istory"),
+                selection_count_display,
+            }),
             history_list->Render() | vscroll_indicator | frame
         );
     });

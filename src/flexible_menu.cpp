@@ -83,8 +83,8 @@ class MenuBase : public ComponentBase {
       if (*selected_ != old_selected) {
         focused_entry() = *selected_;
         option_->on_change();
-        return true;
       }
+      return true;
     }
 
     if (event == Event::Return) {
