@@ -25,12 +25,14 @@ diff_display_item_from_diff(const TextDiff& diff, U32 view_width)
     };
 }
 
-StringRef curr_file_name(FilePickerState* file_picker)
+StringRef
+curr_file_name(FilePickerState* file_picker)
 {
     return file_picker->file_names.at(file_picker->selected_file_index);
 }
 
-U32 get_num_matches_found_for_curr_file(FilePickerState* file_picker)
+U32
+get_num_matches_found_for_curr_file(FilePickerState* file_picker)
 {
     if (file_picker->file_names.size() == 0)
     {
@@ -39,7 +41,8 @@ U32 get_num_matches_found_for_curr_file(FilePickerState* file_picker)
     return file_picker->file_to_num_matches_found.at(file_picker->selected_file_index);
 }
 
-U32 get_num_matches_processed_for_curr_file(FilePickerState* file_picker)
+U32
+get_num_matches_processed_for_curr_file(FilePickerState* file_picker)
 {
     if (file_picker->file_names.size() == 0)
     {
@@ -51,7 +54,8 @@ U32 get_num_matches_processed_for_curr_file(FilePickerState* file_picker)
     return found - remaining;
 }
 
-void update_view_widths(AppState* state)
+void
+update_view_widths(AppState* state)
 {
     auto terminal_x_size = ftxui::Terminal::Size().dimx;
     auto widths = split_term_x_into_three_by_ratios(
@@ -65,12 +69,14 @@ void update_view_widths(AppState* state)
     state->history_viewer_state.current_width = widths.at(2);
 }
 
-B32 all_matches_processed_for_file(FilePickerState* file_picker, StringRef file_name)
+B32
+all_matches_processed_for_file(FilePickerState* file_picker, StringRef file_name)
 {
     return file_picker->file_to_matches.at(file_name).size() == 0;
 }
 
-B32 all_matches_processed_for_current_file(FilePickerState* file_picker)
+B32
+all_matches_processed_for_current_file(FilePickerState* file_picker)
 {
     if (not files_have_been_loaded(file_picker))
     {
@@ -79,7 +85,8 @@ B32 all_matches_processed_for_current_file(FilePickerState* file_picker)
     return file_picker->file_to_matches.at(curr_file_name(file_picker)).size() == 0;
 }
 
-B32 files_have_been_loaded(FilePickerState* file_picker)
+B32
+files_have_been_loaded(FilePickerState* file_picker)
 {
     if (file_picker->file_to_matches.size() == 0)
     {
@@ -91,12 +98,14 @@ B32 files_have_been_loaded(FilePickerState* file_picker)
     }
 }
 
-B32 history_has_diffs(HistoryViewerState* history)
+B32
+history_has_diffs(HistoryViewerState* history)
 {
     return history->diffs.size() > 0;
 }
 
-ag_result::ag_match match_from_text_diff(const TextDiff& diff)
+ag_result::ag_match
+match_from_text_diff(const TextDiff& diff)
 {
     return ag_result::ag_match {
         .byte_start = diff.byte_slice.start,
@@ -105,7 +114,8 @@ ag_result::ag_match match_from_text_diff(const TextDiff& diff)
     };
 }
 
-B32 is_current_diff_valid(HistoryViewerState* history)
+B32
+is_current_diff_valid(HistoryViewerState* history)
 {
     return history_has_diffs(history) and (history->selected_diff < history->diffs.size());
 }

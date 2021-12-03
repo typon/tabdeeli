@@ -1,10 +1,12 @@
 #include <fn.hpp>
 #include <fstream>
+#include <algorithm>
+
+#include <ftxui/dom/table.hpp>      // for Table, TableSelection
 
 #include "serde.hpp"
 #include "object_utils.hpp"
 #include "components.hpp"
-#include "ftxui/component/component_base.hpp"
 #include "utils.hpp"
 #include "metaprogramming.hpp"
 
@@ -15,7 +17,8 @@ using ftxui_extras::StyledButton;
 namespace tb
 {
 
-void reset_state_before_search(AppState* app_state)
+void
+reset_state_before_search(AppState* app_state)
 {
 
     Searcher* searcher = &app_state->searcher;
@@ -38,6 +41,7 @@ void reset_state_before_search(AppState* app_state)
     file_picker->replacement_file_managers.clear();
 
     FileViewerState* file_viewer = &app_state->file_viewer_state;
+    file_viewer->file_name = NO_FILE_LOADED;
     file_viewer->prev_lines.clear();
     file_viewer->new_lines.clear();
     file_viewer->preamble.clear();
@@ -51,6 +55,11 @@ void reset_state_before_search(AppState* app_state)
     history->selected_diff = 0;
     history->diffs.clear();
     history->diffs_as_displayed.clear();
+
+    FileCommitState* commit_state = &app_state->commit_state;
+    commit_state->success_files.clear();
+    commit_state->error_files.clear();
+    commit_state->files_have_been_commmitted = false;
 }
 
 void
@@ -72,14 +81,16 @@ set_current_file_from_selected_diff(AppState* app_state)
     app_state->screen->PostEvent(Event::Custom);
 }
 
-void add_diff_to_history(AppState* state, HistoryViewerState* history, const TextDiff& diff)
+void
+add_diff_to_history(AppState* state, HistoryViewerState* history, const TextDiff& diff)
 {
     update_view_widths(state);
     history->diffs.push_back(diff);
     history->diffs_as_displayed.push_back(diff_display_item_from_diff(diff, history->current_width - 4));
 }
 
-ag_result::ag_match pop_current_match(FilePickerState* file_picker)
+ag_result::ag_match
+pop_current_match(FilePickerState* file_picker)
 {
     StringRef file_name = file_picker->file_names.at(file_picker->selected_file_index);
     auto result = file_picker->file_to_matches.at(file_name).front();
@@ -87,7 +98,8 @@ ag_result::ag_match pop_current_match(FilePickerState* file_picker)
     return result;
 }
 
-ByteSlice get_current_match_byte_slice(AppState* app_state, FileViewerMode mode)
+ByteSlice
+get_current_match_byte_slice(AppState* app_state, FileViewerMode mode)
 {
     if (mode == FileViewerMode::FILE_MATCH_VIEWER)
     {
@@ -103,7 +115,8 @@ ByteSlice get_current_match_byte_slice(AppState* app_state, FileViewerMode mode)
     }
 }
 
-void delete_diff_from_history(AppState* app_state)
+void
+delete_diff_from_history(AppState* app_state)
 {
     HistoryViewerState* history = &app_state->history_viewer_state;
     if (not is_current_diff_valid(history))
@@ -127,7 +140,8 @@ void delete_diff_from_history(AppState* app_state)
 
 }
 
-void add_current_change_to_diff_history(AppState* app_state, B32 is_accepted)
+void
+add_current_change_to_diff_history(AppState* app_state, B32 is_accepted)
 {
     FilePickerState* file_picker = &app_state->file_picker_state;
     if (not files_have_been_loaded(file_picker))
@@ -170,7 +184,8 @@ void add_current_change_to_diff_history(AppState* app_state, B32 is_accepted)
     app_state->bottom_bar_state.num_matches_processed++;
 }
 
-void accept_all_changes_in_file(AppState* app_state)
+void
+accept_all_changes_in_file(AppState* app_state)
 {
     FilePickerState* file_picker = &app_state->file_picker_state;
     if (not files_have_been_loaded(file_picker))
@@ -189,7 +204,8 @@ void accept_all_changes_in_file(AppState* app_state)
     }
 }
 
-void reject_all_changes_in_file(AppState* app_state)
+void
+reject_all_changes_in_file(AppState* app_state)
 {
     FilePickerState* file_picker = &app_state->file_picker_state;
     if (not files_have_been_loaded(file_picker))
@@ -250,22 +266,23 @@ populate_file_viewer_state(AppState* app_state, FileViewerMode mode)
         file_picker->file_managers.insert({selected_file_index, file_manager_opt.value()});
     }
 
-    std::string x = file_manager_opt.value().contents;
-    if (std::string(file_manager_opt.value().file_name) == "/home/typon/gitz/tabdeeli/src/object_utils.cpp")
-    {
-        x = x.substr(0, 90);
-    }
-    else {
-    x = x.substr(0, 40);
-    }
-    assert(x.size() > 0);
-
-    log(app_state, "populating file viewer state");
     file_viewer->prev_lines = get_lines_spanning_byte_slice(file_manager_opt.value(), current_match_byte_slice);
 
-    FileManager replacement_file_manager = replace_text_in_file(file_manager_opt.value(), current_match_byte_slice, app_state->bottom_bar_state.replacement_text);
+    String replacement_text;
+    if (mode == FileViewerMode::FILE_MATCH_VIEWER)
+    {
+        replacement_text = app_state->bottom_bar_state.replacement_text;
+    }
+    else
+    {
+        HistoryViewerState* history_state = &app_state->history_viewer_state;
+        TextDiff diff = history_state->diffs.at(history_state->selected_diff);
+        replacement_text = diff.replacement_text;
+    }
 
-    auto replacement_slice = ByteSlice {.start = current_match_byte_slice.start, .end = current_match_byte_slice.start + app_state->bottom_bar_state.replacement_text.length()};
+    FileManager replacement_file_manager = replace_text_in_file(file_manager_opt.value(), current_match_byte_slice, replacement_text);
+
+    auto replacement_slice = ByteSlice {.start = current_match_byte_slice.start, .end = current_match_byte_slice.start + replacement_text.length()};
     file_viewer->new_lines = get_lines_spanning_byte_slice(replacement_file_manager, replacement_slice);
     file_picker->replacement_file_managers.insert({selected_file_index, replacement_file_manager});
 }
@@ -317,27 +334,10 @@ Component
 TopBar(TopBarState* state)
 {
     return Renderer([state] () {
-        auto logo_section = hcenter(bold(text("tabdeeli")));
-
-        if (state->total_changes == 0)
-        {
-            auto progress_bar = hbox({filler()});
-            return hbox({
-                logo_section,
-            });
-        }
-
-        double progress = double(state->changes_processed) / double(state->total_changes);
-        auto progress_bar = hbox({
-            text("Changes processed: "),
-            gauge(progress),
-            text(fmt::format("{}/{}", state->changes_processed, state->total_changes)),
-        });
+        auto logo_section = bold(text("tabdeeli"));
 
         return hbox({
-            logo_section,
-            separator(),
-            progress_bar | flex,
+            logo_section | center | flex,
         });
     });
 }
@@ -354,6 +354,10 @@ BottomBar(AppState* app_state, ScreenInteractive* screen, BottomBarState* state)
             log(app_state, "pre, presetting state");
             reset_state_before_search(app_state);
             log(app_state, "pre, executing search");
+            if (state->search_text.empty())
+            {
+                return;
+            }
             searcher::execute_search(&app_state->searcher, &app_state->logger, state->search_text, state->search_directory);
             log(app_state, "pre, populating picker state");
             populate_file_picker_state(app_state);
@@ -365,7 +369,25 @@ BottomBar(AppState* app_state, ScreenInteractive* screen, BottomBarState* state)
             return hbox({underlined(color(Color::DarkGreen, text("C"))), text("ommit")});
         },
         [app_state] () {
-            log(app_state, "pre, committed");
+            const auto [success_files, error_files] = functional::commit_diffs_to_disk(app_state);
+            FileCommitState* commit_state = &app_state->commit_state;
+            commit_state->success_files = success_files;
+            commit_state->error_files  = error_files;
+
+            std::vector<std::vector<String>> table = {
+                {"File name", "Status"}
+            };
+
+            for (const auto& file: error_files)
+            {
+                table.push_back({file, "✗"});
+            }
+            for (const auto& file: success_files)
+            {
+                table.push_back({file, "✓"});
+            }
+            commit_state->files_table = table;
+            commit_state->files_have_been_commmitted = true;
         }
     );
 
@@ -442,8 +464,6 @@ FilePicker(AppState* app_state, ScreenInteractive* screen, FilePickerState* stat
     state->menu_options.style_focused = bgcolor(Color::Red);
     state->menu_options.style_selected_focused = bgcolor(Color::Red) | bold;
 
-
-    /* auto file_picker_menu = Window(hbox({underlined(color(Color::GrayLight, text("F"))), text("iles")}) , Menu(&state->file_names_as_displayed, &state->selected_file_index, &state->menu_options)); */
     auto file_picker_menu = Menu(&state->file_names_as_displayed, &state->selected_file_index, &state->menu_options);
 
     auto result = Renderer(file_picker_menu, [app_state, state, file_picker_menu] () {
@@ -474,67 +494,9 @@ FilePicker(AppState* app_state, ScreenInteractive* screen, FilePickerState* stat
 Component
 FileViewer(AppState* app_state, FileViewerState* state)
 {
-    auto accept_button = StyledButton(bgcolor(Color::Green),
-        [] () {
-            return hbox({bold(color(Color::DarkGreen, text("Y"))), text("es")});
-        },
-        [app_state] () {
-            add_current_change_to_diff_history(app_state, true);
-        }
-    );
-
-    auto accept_all_in_file_button = StyledButton(bgcolor(Color::Green),
-        [] () {
-            return hbox({text("Ye"), bold(color(Color::DarkGreen, text("s"))), text(" - all in file")});
-        },
-        [app_state] () {
-            log(app_state, "pre, accepted");
-        }
-    );
-
-    auto reject_button = StyledButton(bgcolor(Color::RedLight),
-        [] () {
-            return hbox({bold(color(Color::DarkRed, text("N"))), text("o")});
-        },
-        [app_state] () {
-            log(app_state, "pre, canceled");
-        }
-    );
-
-    auto reject_all_in_file_button = StyledButton(bgcolor(Color::RedLight),
-        [] () {
-            return hbox({text("N"), bold(color(Color::DarkRed, text("o"))), text(" - all in file")});
-        },
-        [app_state] () {
-            log(app_state, "pre, canceled");
-        }
-    );
-
-    auto delete_diff_from_history_button = StyledButton(bgcolor(Color::RedLight),
-        [] () {
-            return hbox({bold(color(Color::DarkRed, text("D"))), text("elete from history")});
-        },
-        [app_state] () {
-            delete_diff_from_history(app_state);
-        }
-    );
-
-    auto layout = Container::Horizontal({
-        /* accept_button, */
-        /* reject_button, */
-        /* accept_all_in_file_button, */
-        /* reject_all_in_file_button, */
-        /* delete_diff_from_history_button, */
-    });
-
     return Renderer([
             app_state,
             state
-            /* accept_button, */
-            /* reject_button, */
-            /* accept_all_in_file_button, */
-            /* reject_all_in_file_button, */
-            /* delete_diff_from_history_button */
         ] () {
         FilePickerState* file_picker_state = &app_state->file_picker_state;
 
@@ -550,7 +512,7 @@ FileViewer(AppState* app_state, FileViewerState* state)
         auto prev_lines_view = vbox(functional::text_views_from_file_lines(state->prev_lines, Color::Red, " -"));
         auto new_lines_view = vbox(functional::text_views_from_file_lines(state->new_lines, Color::SeaGreen1, " +"));
 
-        bool draw_buttons = state->prev_lines.size() > 0;
+        bool draw_buttons = state->prev_lines.size() > 0 and not app_state->commit_state.files_have_been_commmitted;
 
         Element match_choice_menu;
         if (not draw_buttons)
@@ -574,9 +536,6 @@ FileViewer(AppState* app_state, FileViewerState* state)
                         separator(),
                         hbox({text("n"), bold(color(Color::RedLight, text("o"))), text(" - all in file")}),
                     }) | border,
-                    /* reject_button->Render(), */
-                    /* accept_all_in_file_button->Render(), */
-                    /* reject_all_in_file_button->Render(), */
                     filler(),
                     window(text(fmt::format("File matches processed [{}/{}]", num_matches_processed, num_matches_found)), gauge(percent_matches_processed)) | size(WIDTH, GREATER_THAN, 15),
                 });
@@ -614,7 +573,34 @@ FileViewer(AppState* app_state, FileViewerState* state)
         }
 
         Element curr_diff_view;
-        if (app_state->searcher.state == SearcherState::NO_SEARCH_EXECUTED)
+        if (app_state->commit_state.files_have_been_commmitted)
+        {
+
+            auto table = Table(app_state->commit_state.files_table);
+
+            // Add border around everything
+            table.SelectAll().Border(LIGHT);
+
+            // Make header row bold with a double border.
+            table.SelectRow(0).Decorate(bold);
+            table.SelectRow(0).SeparatorVertical(LIGHT);
+            table.SelectRow(0).Border(LIGHT);
+
+            // Align right the "Status" column.
+            table.SelectColumn(1).DecorateCells(center);
+
+            curr_diff_view =
+                window(
+                    text("Files committed to disk"),
+                    hbox({
+                        filler(),
+                        table.Render(),
+                        filler(),
+                    })
+                ) | center;
+
+        }
+        else if (app_state->searcher.state == SearcherState::NO_SEARCH_EXECUTED)
         {
             curr_diff_view =
                 hbox({
@@ -660,8 +646,6 @@ FileViewer(AppState* app_state, FileViewerState* state)
                             filler(),
                             curr_diff_view,
                             filler(),
-                            /* hflow(paragraph(state->preamble)), */
-                            /* hflow(paragraph(state->postamble)), */
                             match_choice_menu,
                         })
         );
@@ -820,8 +804,6 @@ App(AppState* state)
                     history_viewer->TakeFocus();
                 }
             }
-            /* std::vector<U32> bytes = functional::string_to_bytes(event.input()) % functional::bytes_to_uints; */
-            /* log(state, fmt::format(" event caught: {}", tb::meta::to_string(bytes))); */
         }
         return false;
     });

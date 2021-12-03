@@ -1,6 +1,7 @@
 #include <vector>
 #include <map>
 #include <deque>
+#include <set>
 #include <fmt/os.h>
 #include <ftxui/component/component_options.hpp>  // for MenuOption
 #include "ftxui/component/screen_interactive.hpp"  // for Component, ScreenInteractive
@@ -133,6 +134,15 @@ struct HistoryViewerState
     U32 current_width;
 };
 
+struct FileCommitState
+{
+    std::set<String> success_files;
+    std::set<String> error_files;
+    std::vector<std::vector<String>> files_table;
+    S32 selected_file_index;
+    B32 files_have_been_commmitted;
+};
+
 using Logger = fmt::v8::ostream;
 
 struct AppState
@@ -146,6 +156,7 @@ struct AppState
     FileViewerState file_viewer_state;
     HistoryViewerState history_viewer_state;
     BottomBarState bottom_bar_state;
+    FileCommitState commit_state;
 };
 
 

@@ -91,6 +91,11 @@ int main(int argc, char* argv[]) {
             .cancel_button_label = "Cancel",
             .replacement_mode = ReplacementMode::REGEX,
         },
+        .commit_state = FileCommitState {
+            .success_files = {},
+            .error_files = {},
+            .files_have_been_commmitted = false,
+        },
     };
 
     auto app = App(app_state);

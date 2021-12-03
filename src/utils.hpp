@@ -2,6 +2,7 @@
 
 #include <optional>
 #include <algorithm>
+#include <set>
 #include <fn.hpp>
 
 #include "ftxui/dom/elements.hpp"  // for text, separator, bold, hcenter, vbox, hbox, gauge, Element, operator|, border
@@ -18,6 +19,7 @@ void log(AppState* state, std::string_view msg);
 void log(Logger* logger, std::string_view msg);
 Char** vector_of_strings_to_double_char_array(const std::vector<String>& strings);
 FileManager read_file_into_file_manager(const String& file_name);
+B32 write_file_to_disk(const String& file_name, const String& contents);
 std::vector<U32> get_line_start_byte_indices_for_file(const String& file_contents);
 FileManager replace_text_in_file(const FileManager& file_manager, ByteSlice byte_slice, String replacement_text);
 std::vector<FileLine> get_lines_spanning_byte_slice(const FileManager&, ByteSlice);
@@ -142,6 +144,74 @@ static auto text_views_from_file_lines = [](const auto& file_lines, const auto& 
             }) | yflex_grow;
         })
         % fn::to_vector();
+};
+
+static auto verify_byte_slices = [] (const auto& byte_slices)
+{
+    std::move(byte_slices)
+    % fn::sliding_window(2)
+    % fn::for_each([](const auto& prev_next_view) {
+        const auto& prev_next = prev_next_view % fn::to_vector();
+        const auto& prev = prev_next.at(0);
+        const auto& next = prev_next.at(1);
+        assert(prev.byte_slice.end < next.byte_slice.start);
+    });
+};
+
+static auto commit_diffs_to_disk = [] (AppState* app_state)
+{
+    std::set<String> success_files;
+    std::set<String> error_files;
+
+    fn::refs(app_state->history_viewer_state.diffs)
+    % fn::where([](const TextDiff& diff) {
+        return diff.accepted == true;
+    })
+    % fn::group_all_by([](const TextDiff& diff) {
+        return diff.file_name;
+    })
+    % fn::for_each([&](const auto& diffs_for_file) {
+        std::vector<TextDiff> sorted_diffs =
+            fn::refs(diffs_for_file)
+            % fn::sort_by([](const TextDiff& diff) {
+                return diff.byte_slice.start;
+            })
+            % fn::transform([](const auto& diff) { return diff.get(); })
+            % fn::to_vector();
+
+        U32 file_index = sorted_diffs.at(0).file_index;
+        const FileManager& original_file_manager = app_state->file_picker_state.file_managers.at(file_index);
+        const String& original_file_contents = original_file_manager.contents;
+        const String& original_file_name = original_file_manager.file_name;
+        String new_file_contents;
+        String new_file_name = original_file_name;
+        auto file_cursor = original_file_contents.begin();
+
+        for (const TextDiff& diff: sorted_diffs)
+        {
+            auto num_prev_bytes = std::distance(file_cursor, original_file_contents.begin() + diff.byte_slice.start);
+            new_file_contents.append(file_cursor, file_cursor + num_prev_bytes);
+
+            std::advance(file_cursor, num_prev_bytes);
+
+            new_file_contents.append(diff.replacement_text);
+
+            std::advance(file_cursor, (diff.byte_slice.end - diff.byte_slice.start) + 1);
+        }
+        // Copy everything after the last diff
+        const TextDiff& last_diff = sorted_diffs.at(sorted_diffs.size() - 1);
+        new_file_contents.append(file_cursor, original_file_contents.end());
+
+        if (write_file_to_disk(new_file_name, new_file_contents))
+        {
+            success_files.insert(new_file_name);
+        }
+        else
+        {
+            error_files.insert(new_file_name);
+        }
+    });
+    return std::make_pair(success_files, error_files);
 };
 
 } // end namespace tb::functional

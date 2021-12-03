@@ -121,6 +121,19 @@ read_file_into_file_manager(const String& file_name)
     return result;
 }
 
+B32
+write_file_to_disk(const String& file_name, const String& contents)
+{
+    FILE* file_handle = std::fopen(file_name.c_str(), "w");
+    if (file_handle != nullptr)
+    {
+        fprintf(file_handle, contents.c_str());
+        fclose(file_handle);
+        return true;
+    }
+    return false;
+}
+
 std::vector<U32>
 get_line_start_byte_indices_for_file(const String& file_contents)
 {
