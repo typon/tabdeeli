@@ -4,6 +4,7 @@
 
 #include <ftxui/dom/table.hpp>      // for Table, TableSelection
 
+#include "ftxui/screen/color.hpp"
 #include "serde.hpp"
 #include "object_utils.hpp"
 #include "components.hpp"
@@ -16,6 +17,7 @@ using ftxui_extras::StyledButton;
 
 namespace tb
 {
+using namespace colors;
 
 void
 reset_state_before_search(AppState* app_state)
@@ -59,7 +61,7 @@ reset_state_before_search(AppState* app_state)
     FileCommitState* commit_state = &app_state->commit_state;
     commit_state->success_files.clear();
     commit_state->error_files.clear();
-    commit_state->files_have_been_commmitted = false;
+    commit_state->showing_committed_files_modal = false;
 }
 
 void
@@ -334,10 +336,12 @@ Component
 TopBar(TopBarState* state)
 {
     return Renderer([state] () {
-        auto logo_section = bold(text("tabdeeli"));
+        auto logo_section = bold(color(c(Gruvbox::light0), text("tabdeeli")));
+        auto info_section = hbox({color(c(Gruvbox::bright_orange), bold(text("Alt+P"))), text(" for Hel"), underlined(bold(color(c(Gruvbox::bright_orange), text("p"))))});
 
         return hbox({
             logo_section | center | flex,
+            info_section
         });
     });
 }
@@ -346,9 +350,9 @@ BottomBarComponent
 BottomBar(AppState* app_state, ScreenInteractive* screen, BottomBarState* state)
 {
 
-    auto search_button = StyledButton(bgcolor(Color::Blue),
+    auto search_button = StyledButton(bgcolor(c(Gruvbox::bright_blue)),
         [] () {
-            return hbox({underlined(color(Color::DarkBlue, text("S"))), text("earch")});
+            return hbox({underlined(color(c(Gruvbox::neutral_blue), text("S"))), text("earch")});
         },
         [app_state, state] () {
             log(app_state, "pre, presetting state");
@@ -364,9 +368,9 @@ BottomBar(AppState* app_state, ScreenInteractive* screen, BottomBarState* state)
         }
     );
 
-    auto commit_button = StyledButton(bgcolor(Color::Green),
+    auto commit_button = StyledButton(bgcolor(c(Gruvbox::bright_green)),
         [] () {
-            return hbox({underlined(color(Color::DarkGreen, text("C"))), text("ommit")});
+            return hbox({underlined(color(c(Gruvbox::neutral_green), text("C"))), text("ommit")});
         },
         [app_state] () {
             const auto [success_files, error_files] = functional::commit_diffs_to_disk(app_state);
@@ -387,17 +391,15 @@ BottomBar(AppState* app_state, ScreenInteractive* screen, BottomBarState* state)
                 table.push_back({file, "✓"});
             }
             commit_state->files_table = table;
-            commit_state->files_have_been_commmitted = true;
+            commit_state->showing_committed_files_modal = true;
         }
     );
 
-    auto cancel_button = StyledButton(bgcolor(Color::RedLight),
+    auto quit_button = StyledButton(bgcolor(c(Gruvbox::bright_red)),
         [] () {
-            return hbox({text("Cance"), underlined(color(Color::DarkRed, text("l")))});
+            return hbox({underlined(color(c(Gruvbox::neutral_red), text("Q"))), text("uit")});
         },
-        [app_state] () {
-            log(app_state, "pre, canceled");
-        }
+        screen->ExitLoopClosure()
     );
 
     InputOption search_text_input_option;
@@ -413,7 +415,7 @@ BottomBar(AppState* app_state, ScreenInteractive* screen, BottomBarState* state)
         }),
         search_button,
         commit_button,
-        cancel_button,
+        quit_button,
     });
 
     auto self = Renderer(layout, [
@@ -423,7 +425,7 @@ BottomBar(AppState* app_state, ScreenInteractive* screen, BottomBarState* state)
             search_directory_input,
             search_button,
             commit_button,
-            cancel_button] () {
+            quit_button] () {
 
         auto mode_label = bold(text("Mode: " + replacement_mode_serialize(state->replacement_mode)));
         F32 percent_matches_processed = 0;
@@ -434,7 +436,7 @@ BottomBar(AppState* app_state, ScreenInteractive* screen, BottomBarState* state)
 
         return hbox({
             vbox({
-                hbox({text("Search "), underlined(color(Color::GrayLight, text("r"))), text("egex: "), search_text_input->Render()}),
+                hbox({text("Search "), underlined(bold(color(c(Gruvbox::neutral_orange), text("r")))), text("egex: "), search_text_input->Render()}),
                 hbox({text("Replacement string: "), replacement_text_input->Render()}),
                 hbox({text("Search directory: "), search_directory_input->Render()}),
             })| flex,
@@ -443,7 +445,7 @@ BottomBar(AppState* app_state, ScreenInteractive* screen, BottomBarState* state)
             separator(),
             search_button->Render(),
             commit_button->Render(),
-            cancel_button->Render(),
+            quit_button->Render(),
         });
     });
 
@@ -451,7 +453,7 @@ BottomBar(AppState* app_state, ScreenInteractive* screen, BottomBarState* state)
         .self = self,
         .search_button = search_button,
         .commit_button = commit_button,
-        .cancel_button = cancel_button,
+        .quit_button = quit_button,
         .search_text_input = search_text_input,
     };
 }
@@ -459,10 +461,10 @@ BottomBar(AppState* app_state, ScreenInteractive* screen, BottomBarState* state)
 Component
 FilePicker(AppState* app_state, ScreenInteractive* screen, FilePickerState* state)
 {
-    state->menu_options.style_normal = bgcolor(Color::Blue);
-    state->menu_options.style_selected = bgcolor(Color::Yellow);
-    state->menu_options.style_focused = bgcolor(Color::Red);
-    state->menu_options.style_selected_focused = bgcolor(Color::Red) | bold;
+    state->menu_options.style_normal = bgcolor(c(Gruvbox::dark3));
+    state->menu_options.style_selected = bgcolor(c(Gruvbox::faded_orange));
+    state->menu_options.style_focused = bgcolor(c(Gruvbox::bright_orange));
+    state->menu_options.style_selected_focused = bgcolor(c(Gruvbox::bright_orange)) | bold;
 
     auto file_picker_menu = Menu(&state->file_names_as_displayed, &state->selected_file_index, &state->menu_options);
 
@@ -479,7 +481,7 @@ FilePicker(AppState* app_state, ScreenInteractive* screen, FilePickerState* stat
         return
             window(
                 hbox({
-                    underlined(color(Color::GrayLight, text("F"))),
+                    underlined(bold(color(c(Gruvbox::bright_orange), text("F")))),
                     text("iles"),
                     selection_count_display,
                 }),
@@ -509,10 +511,11 @@ FileViewer(AppState* app_state, FileViewerState* state)
             percent_matches_processed = num_matches_processed / F32(num_matches_found);
         }
 
-        auto prev_lines_view = vbox(functional::text_views_from_file_lines(state->prev_lines, Color::Red, " -"));
-        auto new_lines_view = vbox(functional::text_views_from_file_lines(state->new_lines, Color::SeaGreen1, " +"));
+        auto prev_lines_view = vbox(functional::text_views_from_file_lines(state->prev_lines, c(Gruvbox::bright_red), " -"));
+        auto new_lines_view = vbox(functional::text_views_from_file_lines(state->new_lines, c(Gruvbox::bright_aqua), " +"));
 
-        bool draw_buttons = state->prev_lines.size() > 0 and not app_state->commit_state.files_have_been_commmitted;
+        /* bool draw_buttons = state->prev_lines.size() > 0 and not app_state->commit_state.files_have_been_commmitted; */
+        bool draw_buttons = state->prev_lines.size() > 0;
 
         Element match_choice_menu;
         if (not draw_buttons)
@@ -528,13 +531,13 @@ FileViewer(AppState* app_state, FileViewerState* state)
                 hbox({
                     filler(),
                     hbox({
-                        hbox({bold(color(Color::LightGreen, text("y"))), text("es")}),
+                        hbox({bold(color(c(Gruvbox::bright_green), text("y"))), text("es")}),
                         separator(),
-                        hbox({bold(color(Color::RedLight, text("n"))), text("o")}),
+                        hbox({bold(color(c(Gruvbox::bright_red), text("n"))), text("o")}),
                         separator(),
-                        hbox({text("ye"), bold(color(Color::LightGreen, text("s"))), text(" - all in file")}),
+                        hbox({text("ye"), bold(color(c(Gruvbox::bright_green), text("s"))), text(" - all in file")}),
                         separator(),
-                        hbox({text("n"), bold(color(Color::RedLight, text("o"))), text(" - all in file")}),
+                        hbox({text("n"), bold(color(c(Gruvbox::bright_red), text("o"))), text(" - all in file")}),
                     }) | border,
                     filler(),
                     window(text(fmt::format("File matches processed [{}/{}]", num_matches_processed, num_matches_found)), gauge(percent_matches_processed)) | size(WIDTH, GREATER_THAN, 15),
@@ -546,7 +549,7 @@ FileViewer(AppState* app_state, FileViewerState* state)
             match_choice_menu =
                 hbox({
                     filler(),
-                    hbox({bold(color(Color::RedLight, text("D"))), text("elete from history")}) | border,
+                    hbox({bold(color(c(Gruvbox::bright_red), text("D"))), text("elete from history")}) | border,
                     filler(),
                     window(text(fmt::format("File matches processed [{}/{}]", num_matches_processed, num_matches_found)), gauge(percent_matches_processed)) | size(WIDTH, GREATER_THAN, 15),
                 });
@@ -573,40 +576,13 @@ FileViewer(AppState* app_state, FileViewerState* state)
         }
 
         Element curr_diff_view;
-        if (app_state->commit_state.files_have_been_commmitted)
-        {
-
-            auto table = Table(app_state->commit_state.files_table);
-
-            // Add border around everything
-            table.SelectAll().Border(LIGHT);
-
-            // Make header row bold with a double border.
-            table.SelectRow(0).Decorate(bold);
-            table.SelectRow(0).SeparatorVertical(LIGHT);
-            table.SelectRow(0).Border(LIGHT);
-
-            // Align right the "Status" column.
-            table.SelectColumn(1).DecorateCells(center);
-
-            curr_diff_view =
-                window(
-                    text("Files committed to disk"),
-                    hbox({
-                        filler(),
-                        table.Render(),
-                        filler(),
-                    })
-                ) | center;
-
-        }
-        else if (app_state->searcher.state == SearcherState::NO_SEARCH_EXECUTED)
+        if (app_state->searcher.state == SearcherState::NO_SEARCH_EXECUTED)
         {
             curr_diff_view =
                 hbox({
                     filler(),
                     text("No search executed...Press") | vcenter,
-                    color(Color::Blue, text("Search")) | border,
+                    color(c(Gruvbox::neutral_blue), text("Search")) | border,
                     text("button to start") | vcenter,
                     filler(),
                 });
@@ -616,7 +592,7 @@ FileViewer(AppState* app_state, FileViewerState* state)
             curr_diff_view =
                 hbox({
                     filler(),
-                    color(Color::Red, text("No results found...")) | vcenter,
+                    color(c(Gruvbox::bright_red), text("No results found...")) | vcenter,
                     filler(),
                 });
         }
@@ -641,7 +617,7 @@ FileViewer(AppState* app_state, FileViewerState* state)
                 }) | flex | vcenter;
         }
 
-        return window(text(state->file_name),
+        return window(hbox({bold(color(c(Gruvbox::bright_orange), text(state->file_name))), text("")}),
                         vbox({
                             filler(),
                             curr_diff_view,
@@ -667,10 +643,10 @@ DiffItem(const TextDiff& diff)
 Component
 HistoryViewer(AppState* app_state, ScreenInteractive* screen, HistoryViewerState* state)
 {
-    state->menu_options.style_normal = bgcolor(Color::Blue);
-    state->menu_options.style_selected = bgcolor(Color::Yellow);
-    state->menu_options.style_focused = bgcolor(Color::Red);
-    state->menu_options.style_selected_focused = bgcolor(Color::Red) | bold;
+    state->menu_options.style_normal = bgcolor(c(Gruvbox::dark3));
+    state->menu_options.style_selected = bgcolor(c(Gruvbox::faded_orange));
+    state->menu_options.style_focused = bgcolor(c(Gruvbox::bright_orange));
+    state->menu_options.style_selected_focused = bgcolor(c(Gruvbox::bright_orange)) | bold;
 
     bool is_focusable = false;
     auto history_list = ftxui_extras::FlexibleMenu(&state->diffs_as_displayed, &state->selected_diff, is_focusable, &state->menu_options);
@@ -688,7 +664,7 @@ HistoryViewer(AppState* app_state, ScreenInteractive* screen, HistoryViewerState
 
         return window(
             hbox({
-                underlined(color(Color::GrayLight, text("H"))),
+                underlined(bold(color(c(Gruvbox::bright_orange), text("H")))),
                 text("istory"),
                 selection_count_display,
             }),
@@ -719,20 +695,97 @@ App(AppState* state)
 
         update_view_widths(state);
 
-        return vbox({
-            top_bar->Render(),
-            separator(),
-            hbox({
-                file_picker->Render() | size(WIDTH, GREATER_THAN, state->file_picker_state.current_width),
-                file_viewer->Render() | size(WIDTH, GREATER_THAN, state->file_viewer_state.current_width) | flex,
-                history_viewer->Render() | size(WIDTH, GREATER_THAN, state->history_viewer_state.current_width),
-            }) | flex,
-            separator(),
-            bottom_bar.self->Render(),
-        }) | border;
+        auto app_element = vbox({
+                top_bar->Render(),
+                separator(),
+                hbox({
+                    file_picker->Render() | size(WIDTH, GREATER_THAN, state->file_picker_state.current_width),
+                    file_viewer->Render() | size(WIDTH, GREATER_THAN, state->file_viewer_state.current_width) | flex,
+                    history_viewer->Render() | size(WIDTH, GREATER_THAN, state->history_viewer_state.current_width),
+                }) | flex,
+                separator(),
+                bottom_bar.self->Render(),
+            }) | border | bgcolor(c(Gruvbox::dark0));
+
+
+        if (state->showing_help_modal)
+        {
+            auto help_modal = window(bold(text("Help")), vbox({
+                /* hbox(hflow(ftxui_extras::flexible_paragraph("• Press Alt + S to focus on the search button and Press Enter to start search", state->file_viewer_state.current_width))) | flex, */
+                /* hbox(hflow(ftxui_extras::flexible_paragraph("• Alt + F to focus the Files menu. Use arrow keys to scroll up/down.", state->file_viewer_state.current_width))) | flex, */
+                /* hbox(hflow(ftxui_extras::flexible_paragraph("• Alt + H to focus the History menu. Use arrow keys to scroll up/down. You can remove/add items from the history log. Only diffs that are 'accepted' will be committed to disk", state->file_viewer_state.current_width))) | flex, */
+                hbox({text("• Press Alt + S to focus on the ") | vcenter, bgcolor(c(Gruvbox::neutral_blue), text("Search") | border) , text(" button menu. Press to Enter to start search through files in search directory") | vcenter}),
+                hbox(hflow(paragraph("• Alt + F to focus the Files menu. Use arrow keys to scroll up/down."))),
+                hbox(hflow(paragraph("• Alt + H to focus the History menu. Use arrow keys to scroll up/down. You can remove/add items from the history log. Only diffs that are 'accepted' will be committed to disk"))) | xflex,
+                hbox({text("• Press Alt + C to focus on the ") | vcenter, bgcolor(c(Gruvbox::neutral_green), text("Commit") | border) , text(" button menu. Press to Enter to commit the diffs to disk") | vcenter}),
+            })) | size(WIDTH, GREATER_THAN, state->file_viewer_state.current_width + 4);
+
+            app_element = dbox({
+                app_element,
+                help_modal | bgcolor(c(Gruvbox::dark1))| flex | clear_under | center
+            });
+        }
+        else if (state->commit_state.showing_committed_files_modal)
+        {
+            auto table = Table(state->commit_state.files_table);
+
+            // Add border around everything
+            table.SelectAll().Border(LIGHT);
+
+            // Make header row bold with a double border.
+            table.SelectRow(0).Decorate(bold);
+            table.SelectRow(0).SeparatorVertical(LIGHT);
+            table.SelectRow(0).Border(LIGHT);
+
+            // Align right the "Status" column.
+            table.SelectColumn(1).DecorateCells(center);
+
+            B32 have_committed_files =
+                (state->commit_state.error_files.size() + state->commit_state.success_files.size()) > 0;
+
+            auto commited_files_modal = have_committed_files ?
+                window(
+                    text("Files committed to disk"),
+                    hbox({
+                        filler(),
+                        table.Render() | flex | vscroll_indicator,
+                        filler(),
+                    }) | flex
+                )
+                :
+                window(
+                    text("Files committed to disk"),
+                    bold(color(c(Gruvbox::bright_orange), text("No diffs to commit!"))) | flex | center
+                );
+
+            app_element = dbox({
+                app_element,
+                commited_files_modal | bgcolor(c(Gruvbox::dark1)) | flex | clear_under | center
+            });
+        }
+        return app_element;
     });
+
     self = CatchEvent(self, [state, file_picker, history_viewer, bottom_bar] (Event event) {
-        if (event.is_character()) {
+        if (state->showing_help_modal or state->commit_state.showing_committed_files_modal)
+        {
+            if (event == Event::Escape)
+            {
+                if (state->showing_help_modal)
+                {
+                    state->showing_help_modal = false;
+                }
+                if (state->commit_state.showing_committed_files_modal)
+                {
+                    reset_state_before_search(state);
+                    state->commit_state.showing_committed_files_modal = false;
+
+                }
+            }
+            return true;
+        }
+        else if (event.is_character())
+        {
             String character = event.character();
             if (file_picker->Focused())
             {
@@ -763,7 +816,6 @@ App(AppState* state)
         }
         else if (event == Event::Custom)
         {
-            log(state, "custom event, focusing file picker");
             Action action = state->actions_queue.front();
             state->actions_queue.pop_front();
             switch (action.type)
@@ -787,9 +839,9 @@ App(AppState* state)
                 {
                     bottom_bar.commit_button->TakeFocus();
                 }
-                else if (U32(event.input().at(0)) == 27 and U32(event.input().at(1)) == 'l')
+                else if (U32(event.input().at(0)) == 27 and U32(event.input().at(1)) == 'q')
                 {
-                    bottom_bar.cancel_button->TakeFocus();
+                    bottom_bar.quit_button->TakeFocus();
                 }
                 else if (U32(event.input().at(0)) == 27 and U32(event.input().at(1)) == 'r')
                 {
@@ -802,6 +854,10 @@ App(AppState* state)
                 else if (U32(event.input().at(0)) == 27 and U32(event.input().at(1)) == 'h')
                 {
                     history_viewer->TakeFocus();
+                }
+                else if (U32(event.input().at(0)) == 27 and U32(event.input().at(1)) == 'p')
+                {
+                    state->showing_help_modal = true;
                 }
             }
         }

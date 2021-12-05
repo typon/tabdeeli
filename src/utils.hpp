@@ -9,6 +9,7 @@
 
 #include "components.hpp"
 #include "state.hpp"
+#include "colors.hpp"
 
 namespace fn = rangeless::fn;
 using fn::operators::operator%;
@@ -30,6 +31,8 @@ std::string rtrim(const std::string &s);
 std::string ltrim(const std::string &s);
 std::vector<std::string> split_string(const std::string& s, U32 every_n_chars);
 std::vector<U32> split_term_x_into_three_by_ratios(U32 total_width, F32 first, F32 second, F32 third);
+ftxui::Color c(std::tuple<U32, U32, U32> color_tuple);
+
 }
 
 namespace tb::functional
@@ -138,7 +141,7 @@ static auto text_views_from_file_lines = [](const auto& file_lines, const auto& 
 
             return hbox({
                 color(line_color, text(line_prefix)),
-                color(Color::GrayLight, text(fmt::format("{:>{}}", file_line.lineno + 1, gutter_width))) | bold | size(WIDTH, EQUAL, gutter_width),
+                color(c(tb::colors::Gruvbox::light4), text(fmt::format("{:>{}}", file_line.lineno + 1, gutter_width))) | bold | size(WIDTH, EQUAL, gutter_width),
                 color(Color::GrayLight, text("| ")),
                 color(line_color, hflow(ftxui_extras::flexible_paragraph(file_line.content, max_flexible_paragraph_line_width)))
             }) | yflex_grow;

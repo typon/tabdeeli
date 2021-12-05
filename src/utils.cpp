@@ -7,8 +7,6 @@
 #include "state.hpp"
 #include "metaprogramming.hpp"
 
-using tb::meta::to_string;
-
 namespace tb
 {
 
@@ -31,11 +29,12 @@ log(Logger* logger, std::string_view msg)
 Char**
 vector_of_strings_to_double_char_array(const std::vector<String>& strings)
 {
-    Char** result = static_cast<Char**>(malloc(strings.size()));
+    Char** result = static_cast<Char**>(malloc(sizeof(Char*)*strings.size()));
     int index = 0;
     for (const String& string: strings)
     {
         result[index] = const_cast<Char*>(string.c_str());
+        index++;
     }
     return result;
 }
@@ -267,6 +266,16 @@ split_term_x_into_three_by_ratios(U32 total_width, F32 first, F32 second, F32 th
         U32(second * total_width),
         U32(third * total_width),
     };
+}
+
+ftxui::Color
+c(std::tuple<U32, U32, U32> color_tuple)
+{
+    return ftxui::Color::RGB(
+        std::get<0>(color_tuple),
+        std::get<1>(color_tuple),
+        std::get<2>(color_tuple)
+    );
 }
 
 } // end of namespace

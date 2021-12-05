@@ -83,9 +83,6 @@ struct BottomBarState
     String search_text;
     String replacement_text;
     String search_directory;
-    String search_button_label;
-    String commit_button_label;
-    String cancel_button_label;
     ReplacementMode replacement_mode;
     U32 num_matches_processed;
     U32 num_matches_found;
@@ -140,7 +137,7 @@ struct FileCommitState
     std::set<String> error_files;
     std::vector<std::vector<String>> files_table;
     S32 selected_file_index;
-    B32 files_have_been_commmitted;
+    B32 showing_committed_files_modal;
 };
 
 using Logger = fmt::v8::ostream;
@@ -151,6 +148,8 @@ struct AppState
     Searcher searcher;
     std::deque<Action> actions_queue;
     ftxui::ScreenInteractive* screen;
+    B32 showing_help_modal;
+
     TopBarState top_bar_state;
     FilePickerState file_picker_state;
     FileViewerState file_viewer_state;
@@ -165,7 +164,7 @@ struct BottomBarComponent
     ftxui::Component self;
     ftxui::Component search_button;
     ftxui::Component commit_button;
-    ftxui::Component cancel_button;
+    ftxui::Component quit_button;
     ftxui::Component search_text_input;
 };
 

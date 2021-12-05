@@ -120,4 +120,5 @@ is_current_diff_valid(HistoryViewerState* history)
     return history_has_diffs(history) and (history->selected_diff < history->diffs.size());
 }
 
+
 } // end namespace tb

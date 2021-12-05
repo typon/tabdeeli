@@ -49,6 +49,7 @@ int main(int argc, char* argv[]) {
         .searcher = searcher::init_searcher(),
         .actions_queue = {},
         .screen = &screen,
+        .showing_help_modal = false,
         .top_bar_state = TopBarState {
             .changes_processed = 0,
             .total_changes = 0,
@@ -86,15 +87,12 @@ int main(int argc, char* argv[]) {
             .search_text = search_text,
             .replacement_text = replacement_text,
             .search_directory = search_directory,
-            .search_button_label = "Search",
-            .commit_button_label = "Commit",
-            .cancel_button_label = "Cancel",
             .replacement_mode = ReplacementMode::REGEX,
         },
         .commit_state = FileCommitState {
             .success_files = {},
             .error_files = {},
-            .files_have_been_commmitted = false,
+            .showing_committed_files_modal = false,
         },
     };
 
