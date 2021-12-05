@@ -26,9 +26,7 @@ reset_state_before_search(AppState* app_state)
     Searcher* searcher = &app_state->searcher;
     if (searcher->results != nullptr)
     {
-        ag_free_all_results(searcher->results, searcher->num_results);
-        searcher->num_results = 0;
-        ag_finish();
+        searcher::reset_state(searcher);
         *searcher = searcher::init_searcher();
     }
 
@@ -359,6 +357,11 @@ BottomBar(AppState* app_state, ScreenInteractive* screen, BottomBarState* state)
             {
                 return;
             }
+            if (searcher::is_regex_invalid(&app_state->searcher, state->search_text))
+            {
+                app_state->searcher.state = SearcherState::INVALID_REGEX;
+                return;
+            }
             searcher::execute_search(&app_state->searcher, &app_state->logger, state->search_text, state->search_directory);
             populate_file_picker_state(app_state);
         }
@@ -400,7 +403,7 @@ BottomBar(AppState* app_state, ScreenInteractive* screen, BottomBarState* state)
 
     InputOption search_text_input_option;
     auto search_text_input = ftxui_extras::FlexibleInput(&state->search_text, "Enter search regex...", search_text_input_option);
-    auto replacement_text_input = ftxui_extras::FlexibleInput(&state->replacement_text, "Enter replacement text...", search_text_input_option);
+    auto replacement_text_input = ftxui_extras::FlexibleInput(&state->replacement_text, "<empty>", search_text_input_option);
     auto search_directory_input = ftxui_extras::FlexibleInput(&state->search_directory, "Enter search directory...", search_text_input_option);
 
     auto layout = Container::Horizontal({

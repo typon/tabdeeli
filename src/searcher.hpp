@@ -35,6 +35,8 @@ namespace searcher
 {
     Searcher init_searcher();
     void execute_search(Searcher* searcher, Logger* logger, StringRef search_text, StringRef search_directory);
+    void reset_state(Searcher* searcher);
+    S32 is_regex_invalid(Searcher* searcher, StringRef search_text);
 }
 
 }

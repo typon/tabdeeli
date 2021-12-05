@@ -22,18 +22,28 @@ Searcher init_searcher()
     return result;
 }
 
+void reset_state(Searcher* searcher)
+{
+    ag_free_all_results(searcher->results, searcher->num_results);
+    searcher->num_results = 0;
+    searcher->results = nullptr;
+    ag_finish();
+}
+
+S32 is_regex_invalid(Searcher* searcher, StringRef search_text)
+{
+	S32 result = ag_is_regex_valid(const_cast<char*>(search_text.get().data())) == -2;
+    reset_state(searcher);
+    return result;
+}
+
 void execute_search(Searcher* searcher, Logger* logger, StringRef search_text, StringRef search_directory)
 {
     std::vector<String> paths = {search_directory};
-	if (ag_is_regex_valid(const_cast<char*>(search_text.get().data())) == -2)
-    {
-        searcher->state = SearcherState::INVALID_REGEX;
-        searcher->results = nullptr;
-        searcher->num_results = 0;
-        return;
-    }
 
-	searcher->results = ag_search(const_cast<char*>(search_text.get().data()), paths.size(), vector_of_strings_to_double_char_array(paths), &searcher->num_results);
+	Char** paths_as_char_arrays = vector_of_strings_to_double_char_array(paths);
+
+	searcher->results = ag_search(const_cast<char*>(search_text.get().data()), paths.size(), paths_as_char_arrays, &searcher->num_results);
 	if (not searcher->results)
     {
         searcher->state = SearcherState::NO_RESULTS_FOUND;
@@ -42,6 +52,8 @@ void execute_search(Searcher* searcher, Logger* logger, StringRef search_text, S
     {
         searcher->state = SearcherState::RESULTS_FOUND;
     }
+
+    free(paths_as_char_arrays);
 }
 
 } // end namespace searcher
