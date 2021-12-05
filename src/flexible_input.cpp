@@ -188,7 +188,6 @@ class WideInputBase : public ComponentBase {
 // An input box. The user can type text into it.
 // For convenience, the std::string version of Input simply wrap a
 // WideInputBase.
-// TODO(arthursonzogni): Provide an implementation handling std::string natively
 // and adds better support for combining characters.
 class InputBase : public WideInputBase {
  public:
@@ -276,7 +275,3 @@ Component FlexibleInput(WideStringRef content,
 }
 
 }  // namespace ftxui_extras
-
-// Copyright 2020 Arthur Sonzogni. All rights reserved.
-// Use of this source code is governed by the MIT license that can be found in
-// the LICENSE file.

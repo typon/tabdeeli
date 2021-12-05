@@ -45,7 +45,7 @@ int main(int argc, char* argv[]) {
     ScreenInteractive screen = ScreenInteractive::Fullscreen();
 
     AppState* app_state = new AppState {
-        .logger = fmt::output_file("log.log"),
+        .logger = fmt::output_file("/dev/null"),
         .searcher = searcher::init_searcher(),
         .actions_queue = {},
         .screen = &screen,
@@ -100,7 +100,3 @@ int main(int argc, char* argv[]) {
 
     screen.Loop(app.self);
 }
-
-// Copyright 2020 Arthur Sonzogni. All rights reserved.
-// Use of this source code is governed by the MIT license that can be found in
-// the LICENSE file.
