@@ -5,7 +5,6 @@
 #include <string>
 
 #include "state.hpp"
-#include "metaprogramming.hpp"
 
 namespace tb
 {
