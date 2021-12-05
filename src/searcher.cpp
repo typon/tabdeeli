@@ -6,34 +6,34 @@
 namespace tb
 {
 
+Searcher::Searcher()
+{
+    /* 4 workers and enable binary files search. */
+    std::memset(&this->config, 0, sizeof(struct ag_config));
+	this->config.search_binary_files = 0;
+	this->config.num_workers = 4;
+    ag_init_config(&this->config);
+    this->state = SearcherState::NO_SEARCH_EXECUTED;
+    this->num_results = 0;
+}
+
+Searcher::~Searcher()
+{
+    if (this->results != nullptr)
+    {
+        ag_free_all_results(this->results, this->num_results);
+        ag_finish();
+    }
+    this->num_results = 0;
+    this->results = nullptr;
+}
+
 namespace searcher
 {
 
-Searcher init_searcher()
+B32 is_regex_invalid(StringRef search_text)
 {
-    Searcher result;
-    /* 4 workers and enable binary files search. */
-    std::memset(&result.config, 0, sizeof(struct ag_config));
-	result.config.search_binary_files = 0;
-	result.config.num_workers = 4;
-    ag_init_config(&result.config);
-    result.state = SearcherState::NO_SEARCH_EXECUTED;
-
-    return result;
-}
-
-void reset_state(Searcher* searcher)
-{
-    ag_free_all_results(searcher->results, searcher->num_results);
-    searcher->num_results = 0;
-    searcher->results = nullptr;
-    ag_finish();
-}
-
-S32 is_regex_invalid(Searcher* searcher, StringRef search_text)
-{
-	S32 result = ag_is_regex_valid(const_cast<char*>(search_text.get().data())) == -2;
-    reset_state(searcher);
+	B32 result = ag_is_regex_valid(const_cast<char*>(search_text.get().data())) == -2;
     return result;
 }
 

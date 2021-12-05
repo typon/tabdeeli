@@ -131,30 +131,35 @@ ByteSlice {
 }
 
 TEST_CASE("Test search", "[search]" ) {
-    tb::Searcher searcher = tb::searcher::init_searcher();
     tb::Logger logger = fmt::output_file("test.log");
-    String s = "rew";
-    String d = "/home/typon/gitz";
-    tb::searcher::execute_search(&searcher, &logger, s, d);
-    REQUIRE(searcher.num_results > 0);
-    tb::searcher::reset_state(&searcher);
+    {
+        tb::Searcher searcher;
+        String s = "rew";
+        String d = "/home/typon/gitz";
+        tb::searcher::execute_search(&searcher, &logger, s, d);
+        REQUIRE(searcher.num_results > 0);
+    }
 
-    searcher = tb::searcher::init_searcher();
-    s = "lew";
-    d = "/home/typon/gitz/tabdeeli";
-    tb::searcher::execute_search(&searcher, &logger, s, d);
-
-    REQUIRE(searcher.num_results == 5);
-    tb::searcher::reset_state(&searcher);
+    {
+        tb::Searcher searcher;
+        String s = "lew";
+        String d = "/home/typon/gitz/tabdeeli";
+        tb::searcher::execute_search(&searcher, &logger, s, d);
+        REQUIRE(searcher.num_results == 5);
+    }
 }
 
 TEST_CASE("Test search 2", "[search]" ) {
-    tb::Searcher searcher = tb::searcher::init_searcher();
+    tb::Searcher searcher;
     tb::Logger logger = fmt::output_file("test.log");
     String s = "fruityloops";
     String d = "../";
     tb::searcher::execute_search(&searcher, &logger, s, d);
     REQUIRE(searcher.num_results > 0);
+}
 
-    tb::searcher::reset_state(&searcher);
+TEST_CASE("Test search 3", "[search]" ) {
+    {
+    tb::Searcher searcher;
+    }
 }

@@ -20,6 +20,7 @@ enum class ActionType
 {
     FocusFilePicker,
     NoOp,
+    AcceptAllChangesInFile
 };
 
 enum class FileViewerMode
@@ -57,7 +58,7 @@ struct FileManager
 struct Action {
     ActionType type;
     union {
-        struct { int foo; };
+        struct { U32 file_index; };
     };
 };
 
@@ -145,7 +146,7 @@ using Logger = fmt::v8::ostream;
 struct AppState
 {
     Logger logger;
-    Searcher searcher;
+    Searcher* searcher;
     std::deque<Action> actions_queue;
     ftxui::ScreenInteractive* screen;
     B32 showing_help_modal;
@@ -162,6 +163,7 @@ struct AppState
 struct BottomBarComponent
 {
     ftxui::Component self;
+    ftxui::Component accept_all_button;
     ftxui::Component search_button;
     ftxui::Component commit_button;
     ftxui::Component quit_button;

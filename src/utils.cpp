@@ -80,15 +80,10 @@ read_file_into_file_manager(const String& file_name)
         .file_name = file_name,
         .contents = {},
         .line_start_byte_indices = {},
-        /* .match_byte_slices = {}, */
     };
-
-    /* U32 size = byte_end - byte_start + 1; */
 
     FILE* file_handle = std::fopen(file_name.c_str(), "rb");
     assert(file_handle != nullptr); // make sure the file is openable.
-
-    /* std::fseek(file_handle, byte_start, SEEK_SET); // seek to start of slice */
 
     U32 byte_index = 0;
     Char prev_char = '\n';
@@ -206,9 +201,6 @@ get_line_indices_spanning_byte_slice(const FileManager& file_manager, ByteSlice 
         // std::upper_bound returns the element AFTER the one in which the end_byte_index appears
         end_line_index = end_line_index - 1;
     }
-
-    /* fmt::print("\nline_start_byte: {}\n", to_string(file_manager.line_start_byte_indices)); */
-    /* fmt::print("\nbyte_slice: {}, start: {}, end: {}\n", to_string(byte_slice), start_line_index, end_line_index); */
 
     return {start_line_index, end_line_index};
 }

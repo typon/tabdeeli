@@ -46,7 +46,7 @@ int main(int argc, char* argv[]) {
 
     AppState* app_state = new AppState {
         .logger = fmt::output_file("/dev/null"),
-        .searcher = searcher::init_searcher(),
+        .searcher = new Searcher(),
         .actions_queue = {},
         .screen = &screen,
         .showing_help_modal = false,

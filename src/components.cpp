@@ -20,15 +20,13 @@ namespace tb
 using namespace colors;
 
 void
+populate_file_viewer_state(AppState* app_state, FileViewerMode mode);
+
+void
 reset_state_before_search(AppState* app_state)
 {
-
-    Searcher* searcher = &app_state->searcher;
-    if (searcher->results != nullptr)
-    {
-        searcher::reset_state(searcher);
-        *searcher = searcher::init_searcher();
-    }
+    delete app_state->searcher;
+    app_state->searcher = new Searcher();
 
     FilePickerState* file_picker = &app_state->file_picker_state;
     file_picker->selected_file_index = 0;
@@ -224,6 +222,29 @@ reject_all_changes_in_file(AppState* app_state)
 }
 
 void
+accept_all_changes_in_all_files(AppState* app_state)
+{
+    BottomBarState* bottom_bar = &app_state->bottom_bar_state;
+    FilePickerState* file_picker = &app_state->file_picker_state;
+    if (bottom_bar->num_matches_found == 0)
+    {
+        return;
+    }
+    if (not files_have_been_loaded(file_picker))
+    {
+        return;
+    }
+    for (U32 file_index = 0; file_index < file_picker->file_names.size(); file_index++)
+    {
+        file_picker->selected_file_index = file_index;
+        populate_file_viewer_state(app_state, FileViewerMode::FILE_MATCH_VIEWER);
+        accept_all_changes_in_file(app_state);
+    }
+    app_state->actions_queue.push_back(Action {ActionType::NoOp});
+    app_state->screen->PostEvent(Event::Custom);
+}
+
+void
 populate_file_viewer_state(AppState* app_state, FileViewerMode mode)
 {
     FilePickerState* file_picker = &app_state->file_picker_state;
@@ -290,7 +311,7 @@ void
 populate_file_picker_state(AppState* app_state)
 {
     FilePickerState* file_picker = &app_state->file_picker_state;
-    Searcher* searcher = &app_state->searcher;
+    Searcher* searcher = app_state->searcher;
 
     U32 num_matches_found = 0;
 
@@ -347,22 +368,36 @@ BottomBarComponent
 BottomBar(AppState* app_state, ScreenInteractive* screen, BottomBarState* state)
 {
 
+    auto accept_all_button = StyledButton(bgcolor(c(Gruvbox::bright_purple)),
+        [] () {
+            return hbox({underlined(color(c(Gruvbox::neutral_purple), text("A"))), text("ccept all")});
+        },
+        [app_state] () {
+            accept_all_changes_in_all_files(app_state);
+        }
+    );
+
     auto search_button = StyledButton(bgcolor(c(Gruvbox::bright_blue)),
         [] () {
             return hbox({underlined(color(c(Gruvbox::neutral_blue), text("S"))), text("earch")});
         },
         [app_state, state] () {
-            reset_state_before_search(app_state);
             if (state->search_text.empty())
             {
                 return;
             }
-            if (searcher::is_regex_invalid(&app_state->searcher, state->search_text))
+            if (searcher::is_regex_invalid(state->search_text))
             {
-                app_state->searcher.state = SearcherState::INVALID_REGEX;
+                reset_state_before_search(app_state);
+                app_state->searcher->state = SearcherState::INVALID_REGEX;
                 return;
             }
-            searcher::execute_search(&app_state->searcher, &app_state->logger, state->search_text, state->search_directory);
+
+            // We need to reset the state again because running is_regex_invalid modifies
+            // global state in libag :(
+            reset_state_before_search(app_state);
+
+            searcher::execute_search(app_state->searcher, &app_state->logger, state->search_text, state->search_directory);
             populate_file_picker_state(app_state);
         }
     );
@@ -412,6 +447,7 @@ BottomBar(AppState* app_state, ScreenInteractive* screen, BottomBarState* state)
             replacement_text_input,
             search_directory_input,
         }),
+        accept_all_button,
         search_button,
         commit_button,
         quit_button,
@@ -423,17 +459,17 @@ BottomBar(AppState* app_state, ScreenInteractive* screen, BottomBarState* state)
             search_text_input,
             replacement_text_input,
             search_directory_input,
+            accept_all_button,
             search_button,
             commit_button,
             quit_button] () {
 
         // Reset any errors related to regex if we're currently typing.
-        if (search_text_input->Focused() and app_state->searcher.state == SearcherState::INVALID_REGEX)
+        if (search_text_input->Focused() and app_state->searcher->state == SearcherState::INVALID_REGEX)
         {
-            app_state->searcher.state = SearcherState::NO_SEARCH_EXECUTED;
+            app_state->searcher->state = SearcherState::NO_SEARCH_EXECUTED;
         }
 
-        auto mode_label = bold(text("Mode: " + replacement_mode_serialize(state->replacement_mode)));
         F32 percent_matches_processed = 0;
         if (state->num_matches_found > 0)
         {
@@ -449,6 +485,7 @@ BottomBar(AppState* app_state, ScreenInteractive* screen, BottomBarState* state)
             separator(),
             window(text(fmt::format("Matches processed [{}/{}]", state->num_matches_processed, state->num_matches_found)), gauge(percent_matches_processed)) | size(WIDTH, GREATER_THAN, 15),
             separator(),
+            state->num_matches_found == 0 ? emptyElement() : accept_all_button->Render(),
             search_button->Render(),
             commit_button->Render(),
             quit_button->Render(),
@@ -457,6 +494,7 @@ BottomBar(AppState* app_state, ScreenInteractive* screen, BottomBarState* state)
 
     return BottomBarComponent {
         .self = self,
+        .accept_all_button = accept_all_button,
         .search_button = search_button,
         .commit_button = commit_button,
         .quit_button = quit_button,
@@ -520,7 +558,6 @@ FileViewer(AppState* app_state, FileViewerState* state)
         auto prev_lines_view = vbox(functional::text_views_from_file_lines(state->prev_lines, c(Gruvbox::bright_red), " -"));
         auto new_lines_view = vbox(functional::text_views_from_file_lines(state->new_lines, c(Gruvbox::bright_aqua), " +"));
 
-        /* bool draw_buttons = state->prev_lines.size() > 0 and not app_state->commit_state.files_have_been_commmitted; */
         bool draw_buttons = state->prev_lines.size() > 0;
 
         Element match_choice_menu;
@@ -582,7 +619,7 @@ FileViewer(AppState* app_state, FileViewerState* state)
         }
 
         Element curr_diff_view;
-        if (app_state->searcher.state == SearcherState::NO_SEARCH_EXECUTED)
+        if (app_state->searcher->state == SearcherState::NO_SEARCH_EXECUTED)
         {
             curr_diff_view =
                 hbox({
@@ -593,7 +630,7 @@ FileViewer(AppState* app_state, FileViewerState* state)
                     filler(),
                 });
         }
-        else if (app_state->searcher.state == SearcherState::INVALID_REGEX)
+        else if (app_state->searcher->state == SearcherState::INVALID_REGEX)
         {
             curr_diff_view =
                 hbox({
@@ -602,12 +639,12 @@ FileViewer(AppState* app_state, FileViewerState* state)
                     filler(),
                 });
         }
-        else if (app_state->searcher.state == SearcherState::NO_RESULTS_FOUND)
+        else if (app_state->searcher->state == SearcherState::NO_RESULTS_FOUND)
         {
             curr_diff_view =
                 hbox({
                     filler(),
-                    color(c(Gruvbox::bright_red), text("No results found...")) | vcenter,
+                    color(c(Gruvbox::bright_red), text("No results found...") | bold) | vcenter,
                     filler(),
                 });
         }
@@ -725,10 +762,7 @@ App(AppState* state)
 
         if (state->showing_help_modal)
         {
-            auto help_modal = window(bold(text("Help")), vbox({
-                /* hbox(hflow(ftxui_extras::flexible_paragraph("• Press Alt + S to focus on the search button and Press Enter to start search", state->file_viewer_state.current_width))) | flex, */
-                /* hbox(hflow(ftxui_extras::flexible_paragraph("• Alt + F to focus the Files menu. Use arrow keys to scroll up/down.", state->file_viewer_state.current_width))) | flex, */
-                /* hbox(hflow(ftxui_extras::flexible_paragraph("• Alt + H to focus the History menu. Use arrow keys to scroll up/down. You can remove/add items from the history log. Only diffs that are 'accepted' will be committed to disk", state->file_viewer_state.current_width))) | flex, */
+            auto help_modal = window(hbox({bold(color(c(Gruvbox::bright_orange), text("Help"))), text("")}), vbox({
                 hbox({text("• Press Alt + S to focus on the ") | vcenter, bgcolor(c(Gruvbox::neutral_blue), text("Search") | border) , text(" button menu. Press to Enter to start search through files in search directory") | vcenter}),
                 hbox(hflow(paragraph("• Alt + F to focus the Files menu. Use arrow keys to scroll up/down."))),
                 hbox(hflow(paragraph("• Alt + H to focus the History menu. Use arrow keys to scroll up/down. You can remove/add items from the history log. Only diffs that are 'accepted' will be committed to disk"))) | xflex,
@@ -760,7 +794,7 @@ App(AppState* state)
 
             auto commited_files_modal = have_committed_files ?
                 window(
-                    text("Files committed to disk"),
+                    hbox({bold(color(c(Gruvbox::bright_orange), text("Files committed to disk"))), text("")}),
                     hbox({
                         filler(),
                         table.Render() | flex | vscroll_indicator,
@@ -835,8 +869,20 @@ App(AppState* state)
             state->actions_queue.pop_front();
             switch (action.type)
             {
-                case ActionType::FocusFilePicker: file_picker->TakeFocus();
-                case ActionType::NoOp: {};
+                case ActionType::FocusFilePicker:
+                {
+                    file_picker->TakeFocus();
+                    break;
+                }
+                case ActionType::AcceptAllChangesInFile:
+                {
+                    accept_all_changes_in_file(state);
+                    break;
+                };
+                case ActionType::NoOp:
+                {
+                    break;
+                };
                 default: {}
             }
         }
@@ -846,7 +892,11 @@ App(AppState* state)
             // s = 115 (ASCII code)
             if (event.input().size() == 2)
             {
-                if (U32(event.input().at(0)) == 27 and U32(event.input().at(1)) == 's')
+                if (U32(event.input().at(0)) == 27 and U32(event.input().at(1)) == 'a')
+                {
+                    bottom_bar.accept_all_button->TakeFocus();
+                }
+                else if (U32(event.input().at(0)) == 27 and U32(event.input().at(1)) == 's')
                 {
                     bottom_bar.search_button->TakeFocus();
                 }
