@@ -18,7 +18,8 @@ diff_display_item_from_diff(const TextDiff& diff, U32 view_width)
 
     return {
         short_file_name,
-        fmt::format("@ Line: {}, Col: {}",
+        fmt::format("{} Line: {}, Col: {}",
+            diff.accepted ? "✓" : "✗",
             diff.start_line_no + 1, // Line numbers are displayed 1-indexed
             diff.start_column + 1 // Line columns are displayed 1-indexed
         ),
