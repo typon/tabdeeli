@@ -38,6 +38,7 @@ int main(int argc, char* argv[]) {
     {
         std::stringstream ss;
         ss << make_man_page(cli, argv[0]);
+        fmt::print("tabdeeli: interactive search/replace tool\n\n");
         fmt::print("{}", ss.str());
         return -1;
     }
