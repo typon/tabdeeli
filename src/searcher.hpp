@@ -16,6 +16,7 @@ using Logger = fmt::v8::ostream;
 
 enum class SearcherState
 {
+    INVALID_REGEX,
     NO_RESULTS_FOUND,
     RESULTS_FOUND,
     NO_SEARCH_EXECUTED,

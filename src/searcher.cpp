@@ -25,11 +25,18 @@ Searcher init_searcher()
 void execute_search(Searcher* searcher, Logger* logger, StringRef search_text, StringRef search_directory)
 {
     std::vector<String> paths = {search_directory};
-	searcher->results = ag_search_ts(const_cast<char*>(search_text.get().data()), paths.size(), vector_of_strings_to_double_char_array(paths), &searcher->num_results);
+	if (ag_is_regex_valid(const_cast<char*>(search_text.get().data())) == -2)
+    {
+        searcher->state = SearcherState::INVALID_REGEX;
+        searcher->results = nullptr;
+        searcher->num_results = 0;
+        return;
+    }
+
+	searcher->results = ag_search(const_cast<char*>(search_text.get().data()), paths.size(), vector_of_strings_to_double_char_array(paths), &searcher->num_results);
 	if (not searcher->results)
     {
         searcher->state = SearcherState::NO_RESULTS_FOUND;
-		 
     }
 	else
     {

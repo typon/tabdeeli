@@ -313,7 +313,7 @@ static int setup_search(void)
 			pcre_opts |= PCRE_CASELESS;
 
 		/* Configure regex stuff. */
-		compile_study(&opts.re, &opts.re_extra, opts.query, pcre_opts,
+		return compile_study(&opts.re, &opts.re_extra, opts.query, pcre_opts,
 			study_opts);
 	}
 
@@ -920,4 +920,37 @@ void ag_free_all_results(struct ag_result **results, size_t nresults)
 	for (i = 0; i < nresults; i++)
 		ag_free_result(results[i]);
 	free(results);
+}
+
+/**
+ *
+ * @brief Checks if the provided regex is valid.
+ *
+ */
+int ag_is_regex_valid(char *query)
+{
+	int i;
+
+	/* Check if libag was initialized. */
+	if (!has_ag_init)
+		return -1;
+
+	/* Query and valid paths. */
+	if (!query)
+		return -1;
+
+	/* Reset stats. */
+	if (opts.stats)
+		memset(&stats, 0, sizeof(stats));
+
+	/* Prepare query. */
+	free(opts.query);
+	opts.query = strdup(query);
+	if (!opts.query)
+		return -1;
+	opts.query_len = strlen(query);
+
+	/* Configure search settings. */
+	opts.casing = config.casing;
+	return setup_search();
 }

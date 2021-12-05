@@ -415,6 +415,7 @@ BottomBar(AppState* app_state, ScreenInteractive* screen, BottomBarState* state)
     });
 
     auto self = Renderer(layout, [
+            app_state,
             state,
             search_text_input,
             replacement_text_input,
@@ -422,6 +423,12 @@ BottomBar(AppState* app_state, ScreenInteractive* screen, BottomBarState* state)
             search_button,
             commit_button,
             quit_button] () {
+
+        // Reset any errors related to regex if we're currently typing.
+        if (search_text_input->Focused() and app_state->searcher.state == SearcherState::INVALID_REGEX)
+        {
+            app_state->searcher.state = SearcherState::NO_SEARCH_EXECUTED;
+        }
 
         auto mode_label = bold(text("Mode: " + replacement_mode_serialize(state->replacement_mode)));
         F32 percent_matches_processed = 0;
@@ -580,6 +587,15 @@ FileViewer(AppState* app_state, FileViewerState* state)
                     text("No search executed...Press") | vcenter,
                     color(c(Gruvbox::neutral_blue), text("Search")) | border,
                     text("button to start") | vcenter,
+                    filler(),
+                });
+        }
+        else if (app_state->searcher.state == SearcherState::INVALID_REGEX)
+        {
+            curr_diff_view =
+                hbox({
+                    filler(),
+                    hbox({color(c(Gruvbox::bright_red), text("Invalid search regex: ") | bold), text(app_state->bottom_bar_state.search_text) | bold}) | vcenter,
                     filler(),
                 });
         }

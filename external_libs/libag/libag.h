@@ -187,5 +187,6 @@
 	extern void ag_free_result(struct ag_result *result);
 	extern void ag_free_all_results(struct ag_result **results,
 		size_t nresults);
+    extern int ag_is_regex_valid(char *query);
 
 #endif /* LIBAG_H. */
