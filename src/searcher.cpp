@@ -29,7 +29,7 @@ void execute_search(Searcher* searcher, Logger* logger, StringRef search_text, S
 	if (not searcher->results)
     {
         searcher->state = SearcherState::NO_RESULTS_FOUND;
-		log(logger, "no results_found");
+		 
     }
 	else
     {

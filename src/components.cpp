@@ -26,7 +26,6 @@ reset_state_before_search(AppState* app_state)
     Searcher* searcher = &app_state->searcher;
     if (searcher->results != nullptr)
     {
-        log(app_state, "Cleaning up ag resources");
         ag_free_all_results(searcher->results, searcher->num_results);
         searcher->num_results = 0;
         ag_finish();
@@ -355,15 +354,12 @@ BottomBar(AppState* app_state, ScreenInteractive* screen, BottomBarState* state)
             return hbox({underlined(color(c(Gruvbox::neutral_blue), text("S"))), text("earch")});
         },
         [app_state, state] () {
-            log(app_state, "pre, presetting state");
             reset_state_before_search(app_state);
-            log(app_state, "pre, executing search");
             if (state->search_text.empty())
             {
                 return;
             }
             searcher::execute_search(&app_state->searcher, &app_state->logger, state->search_text, state->search_directory);
-            log(app_state, "pre, populating picker state");
             populate_file_picker_state(app_state);
         }
     );
