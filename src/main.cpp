@@ -6,7 +6,7 @@
 #include <sstream>            // for std::stringstream, std::stringbuf
 
 
-#include <fmt/core.h>                          // for fmt::format
+#include <fmt/core.h>         // for fmt::format
 #include <fmt/os.h>
 
 #include <clipp.h>
@@ -98,5 +98,12 @@ int main(int argc, char* argv[]) {
 
     auto app = App(app_state);
 
-    screen.Loop(app.self);
+    try
+    {
+        screen.Loop(app.self);
+    }
+    catch (...)
+    {
+        screen.ExitLoopClosure();
+    }
 }
