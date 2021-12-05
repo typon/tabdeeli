@@ -77,7 +77,6 @@ add_executable(tabdeeli
     src/object_utils.cpp
     src/utils.cpp
     src/styled_button.cpp
-    src/serde.cpp
     src/metaprogramming.cpp
     src/flexible_paragraph.cpp
     src/flexible_menu.cpp

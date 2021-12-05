@@ -5,7 +5,6 @@
 #include <ftxui/dom/table.hpp>      // for Table, TableSelection
 
 #include "ftxui/screen/color.hpp"
-#include "serde.hpp"
 #include "object_utils.hpp"
 #include "components.hpp"
 #include "utils.hpp"
