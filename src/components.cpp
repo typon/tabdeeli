@@ -662,10 +662,10 @@ FileViewer(AppState* app_state, FileViewerState* state)
 
         } else {
             curr_diff_view = vbox({
-                prev_lines_view | yflex_grow,
+                prev_lines_view | yflex,
                 separatorHeavy(),
-                new_lines_view | yflex_grow,
-                }) | flex | vcenter;
+                new_lines_view | yflex,
+                }) | flex;
         }
 
         return window(hbox({bold(color(c(Gruvbox::bright_orange), text(state->file_name))), text("")}),
@@ -762,15 +762,15 @@ App(AppState* state)
         if (state->showing_help_modal)
         {
             auto help_modal = window(hbox({bold(color(c(Gruvbox::bright_orange), text("Help"))), text("")}), vbox({
-                hbox({text("• Press Alt + S to focus on the ") | vcenter, bgcolor(c(Gruvbox::neutral_blue), text("Search") | border) , text(" button menu. Press to Enter to start search through files in search directory") | vcenter}),
-                hbox(hflow(paragraph("• Alt + F to focus the Files menu. Use arrow keys to scroll up/down."))),
-                hbox(hflow(paragraph("• Alt + H to focus the History menu. Use arrow keys to scroll up/down. You can remove/add items from the history log. Only diffs that are 'accepted' will be committed to disk"))) | xflex,
-                hbox({text("• Press Alt + C to focus on the ") | vcenter, bgcolor(c(Gruvbox::neutral_green), text("Commit") | border) , text(" button menu. Press to Enter to commit the diffs to disk") | vcenter}),
+                hbox({text("• Press Alt + S to focus on the ") | vcenter, bgcolor(c(Gruvbox::neutral_blue), text("Search") | border) , text(" button menu. Press to Enter to start search through files in search directory.") | vcenter}),
+                hflow(paragraph("• Alt + F to focus the Files menu. Use arrow keys to scroll up/down.")),
+                hflow(paragraph("• Alt + H to focus the History menu. Use arrow keys to scroll up/down. You can remove/add items from the history log. Only diffs that are 'accepted' will be committed to disk.")),
+                hbox({text("• Press Alt + C to focus on the ") | vcenter, bgcolor(c(Gruvbox::neutral_green), text("Commit") | border) , text(" button menu. Press to Enter to commit the diffs to disk.") | vcenter}),
             })) | size(WIDTH, GREATER_THAN, state->file_viewer_state.current_width + 4);
 
             app_element = dbox({
                 app_element,
-                help_modal | bgcolor(c(Gruvbox::dark1))| flex | clear_under | center
+                help_modal | bgcolor(c(Gruvbox::dark1)) | flex | clear_under | center
             });
         }
         else if (state->commit_state.showing_committed_files_modal)
