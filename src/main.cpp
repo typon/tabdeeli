@@ -29,7 +29,7 @@ int main(int argc, char* argv[]) {
 
     auto cli = clipp::with_prefixes_short_long("-", "--",
         clipp::option("s", "search-regex").doc("search regex string") & clipp::value("search_regex", search_text),
-        clipp::option("r", "replacement-string").doc("replacement text string") & clipp::value("replacement_string", replacement_text),
+        clipp::option("r", "replacement-string").doc("replacement text string") & clipp::parameter{clipp::match::any}.label("replacement_string").blocking(true).repeatable(false).set(replacement_text),
         clipp::option("d", "search-directory").doc("top level directory to launch search") & clipp::value("search_directory", search_directory)
     );
 
