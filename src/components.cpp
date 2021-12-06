@@ -354,7 +354,7 @@ TopBar(TopBarState* state)
 {
     return Renderer([state] () {
         auto logo_section = bold(color(c(Gruvbox::light0), text("tabdeeli")));
-        auto info_section = hbox({color(c(Gruvbox::bright_orange), bold(text("Alt+P"))), text(" for Hel"), underlined(bold(color(c(Gruvbox::bright_orange), text("p"))))});
+        auto info_section = hbox({color(c(Gruvbox::bright_orange), bold(text("Shift+P"))), text(" for Hel"), underlined(bold(color(c(Gruvbox::bright_orange), text("p"))))});
 
         return hbox({
             logo_section | center | flex,
@@ -498,6 +498,7 @@ BottomBar(AppState* app_state, ScreenInteractive* screen, BottomBarState* state)
         .commit_button = commit_button,
         .quit_button = quit_button,
         .search_text_input = search_text_input,
+        .replacement_text_input = replacement_text_input,
     };
 }
 
@@ -832,10 +833,50 @@ App(AppState* state)
             }
             return true;
         }
+        else if (bottom_bar.search_text_input->Focused() or bottom_bar.replacement_text_input->Focused())
+        {
+            if (event == Event::Escape)
+            {
+                bottom_bar.search_button->TakeFocus();
+            }
+            return false;
+        }
         else if (event.is_character())
         {
             String character = event.character();
-            if (file_picker->Focused())
+            if (character == "A")
+            {
+                bottom_bar.accept_all_button->TakeFocus();
+            }
+            else if (character == "S")
+            {
+                bottom_bar.search_button->TakeFocus();
+            }
+            else if (character == "C")
+            {
+                bottom_bar.commit_button->TakeFocus();
+            }
+            else if (character == "Q")
+            {
+                bottom_bar.quit_button->TakeFocus();
+            }
+            else if (character == "R")
+            {
+                bottom_bar.search_text_input->TakeFocus();
+            }
+            else if (character == "F")
+            {
+                file_picker->TakeFocus();
+            }
+            else if (character == "H")
+            {
+                history_viewer->TakeFocus();
+            }
+            else if (character == "P" or character == "?")
+            {
+                state->showing_help_modal = true;
+            }
+            else if (file_picker->Focused())
             {
                 if (character == "y")
                 {
@@ -861,6 +902,7 @@ App(AppState* state)
                     delete_diff_from_history(state);
                 }
             }
+            return true;
         }
         else if (event == Event::Custom)
         {
@@ -883,46 +925,6 @@ App(AppState* state)
                     break;
                 };
                 default: {}
-            }
-        }
-        else
-        {
-            // ALT = 27 (ASCII code)
-            // s = 115 (ASCII code)
-            if (event.input().size() == 2)
-            {
-                if (U32(event.input().at(0)) == 27 and U32(event.input().at(1)) == 'a')
-                {
-                    bottom_bar.accept_all_button->TakeFocus();
-                }
-                else if (U32(event.input().at(0)) == 27 and U32(event.input().at(1)) == 's')
-                {
-                    bottom_bar.search_button->TakeFocus();
-                }
-                else if (U32(event.input().at(0)) == 27 and U32(event.input().at(1)) == 'c')
-                {
-                    bottom_bar.commit_button->TakeFocus();
-                }
-                else if (U32(event.input().at(0)) == 27 and U32(event.input().at(1)) == 'q')
-                {
-                    bottom_bar.quit_button->TakeFocus();
-                }
-                else if (U32(event.input().at(0)) == 27 and U32(event.input().at(1)) == 'r')
-                {
-                    bottom_bar.search_text_input->TakeFocus();
-                }
-                else if (U32(event.input().at(0)) == 27 and U32(event.input().at(1)) == 'f')
-                {
-                    file_picker->TakeFocus();
-                }
-                else if (U32(event.input().at(0)) == 27 and U32(event.input().at(1)) == 'h')
-                {
-                    history_viewer->TakeFocus();
-                }
-                else if (U32(event.input().at(0)) == 27 and U32(event.input().at(1)) == 'p')
-                {
-                    state->showing_help_modal = true;
-                }
             }
         }
         return false;

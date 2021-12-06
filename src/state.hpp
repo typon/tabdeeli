@@ -168,6 +168,7 @@ struct BottomBarComponent
     ftxui::Component commit_button;
     ftxui::Component quit_button;
     ftxui::Component search_text_input;
+    ftxui::Component replacement_text_input;
 };
 
 struct AppComponent
